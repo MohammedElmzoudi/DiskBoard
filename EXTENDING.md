@@ -2,7 +2,7 @@
 
 ## Adding an area with an existing handler
 
-Edit your private `~/.config/areas.json`, or the shipped `areas.json` when contributing a general default. Each entry needs a unique `id`, printable `title` and `description`, and an approved `kind`. Remove an entry to remove its option. Reorder entries to reorder the picker; stable IDs do not change.
+Edit your private `~/.config/diskpick/areas.json`, or the shipped `areas.json` when contributing a general default. Each entry needs a unique `id`, printable `title` and `description`, and an approved `kind`. Remove an entry to remove its option. Reorder entries to reorder the picker; stable IDs do not change.
 
 `inspect` accepts absolute or home-relative paths and never deletes. `rust` accepts conventional paths ending in `target/debug` with an adjacent project `Cargo.toml`. `browser` only selects one of the three fixed browser-cache names. JSON never contains shell commands, Python expressions, or unrestricted deletion paths.
 
