@@ -1,0 +1,26 @@
+[2J[H  [38;2;232;238;246m[0m
+  [38;2;111;232;191m◒  diskpick                                     STORAGE, WITH INTENTION.[0m
+  [38;2;140;153;173mPick the disposable. Keep the important.[0m
+  [38;2;140;153;173m────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+  [38;2;232;238;246mFREE  12.40 GiB        ELIGIBLE  8.32 GiB         RESERVE  40 GiB[0m
+  [38;2;245;199;111m▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱   97% used  ·  27.60 GiB below reserve[0m
+  [38;2;245;199;111mDEMO DATA · synthetic preview; not your disk[0m
+  [38;2;140;153;173m────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+  [38;2;140;153;173m #   AREA                                                           ON DISK    ELIGIBLE   STATE[0m
+  [38;2;232;238;246m[0m
+  [38;2;111;232;191m 1   Rust incremental sessions                                    18.60 GiB    6.20 GiB   READY[0m
+  [38;2;111;232;191m 2   Test browser · HTTP                                           2.40 GiB    1.80 GiB   READY[0m
+  [38;2;245;199;111m 3   Test browser · code                                          860.2 MiB       0 KiB   RECENT[0m
+  [38;2;111;232;191m 4   Test browser · GPU                                           327.7 MiB   327.7 MiB   READY[0m
+  [38;2;140;153;173m 5   Package download stores                                       4.60 GiB       0 KiB   MANUAL[0m
+  [38;2;140;153;173m 6   Advertisement exports + QA                                   24.20 GiB       0 KiB   MANUAL[0m
+  [38;2;140;153;173m 7   Development worktrees                                        13.90 GiB       0 KiB   MANUAL[0m
+  [38;2;232;238;246m[0m
+  [38;2;140;153;173m────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+  [38;2;140;153;173mREADY = eligible now. Busy/recent items are kept. MANUAL = inspect only.[0m
+  [38;2;140;153;173mSelection rechecks files + locks. Source, logins and working caches stay.[0m
+  [38;2;232;238;246m[0m
+  [38;2;127;184;255mClean by number   1 4 2   or   1, 4, 2[0m
+  [38;2;140;153;173mr  refresh     d  details     q  quit[0m
+  [38;2;232;238;246m[0m
+  [38;2;111;232;191mdiskpick › [0m

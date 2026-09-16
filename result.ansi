@@ -1,0 +1,28 @@
+1 4, 2
+[2J[H  [38;2;232;238;246m[0m
+  [38;2;111;232;191m◒  diskpick                                     STORAGE, WITH INTENTION.[0m
+  [38;2;140;153;173mPick the disposable. Keep the important.[0m
+  [38;2;140;153;173m────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+  [38;2;232;238;246mFREE  20.72 GiB        ELIGIBLE  0 KiB            RESERVE  40 GiB[0m
+  [38;2;245;199;111m▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱   95% used  ·  19.28 GiB below reserve[0m
+  [38;2;245;199;111mDEMO DATA · synthetic preview; not your disk[0m
+  [38;2;140;153;173m────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+  [38;2;140;153;173m #   AREA                                                           ON DISK    ELIGIBLE   STATE[0m
+  [38;2;232;238;246m[0m
+  [38;2;140;153;173m 1   Rust incremental sessions                                    12.40 GiB       0 KiB   KEPT[0m
+  [38;2;140;153;173m 2   Test browser · HTTP                                          614.4 MiB       0 KiB   KEPT[0m
+  [38;2;245;199;111m 3   Test browser · code                                          860.2 MiB       0 KiB   RECENT[0m
+  [38;2;140;153;173m 4   Test browser · GPU                                               0 KiB       0 KiB   EMPTY[0m
+  [38;2;140;153;173m 5   Package download stores                                       4.60 GiB       0 KiB   MANUAL[0m
+  [38;2;140;153;173m 6   Advertisement exports + QA                                   24.20 GiB       0 KiB   MANUAL[0m
+  [38;2;140;153;173m 7   Development worktrees                                        13.90 GiB       0 KiB   MANUAL[0m
+  [38;2;232;238;246m[0m
+  [38;2;140;153;173m────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+  [38;2;140;153;173mREADY = eligible now. Busy/recent items are kept. MANUAL = inspect only.[0m
+  [38;2;140;153;173mSelection rechecks files + locks. Source, logins and working caches stay.[0m
+  [38;2;111;232;191mDEMO · simulated 8.32 GiB recovery · no real files deleted[0m
+  [38;2;232;238;246m[0m
+  [38;2;127;184;255mClean by number   1 4 2   or   1, 4, 2[0m
+  [38;2;140;153;173mr  refresh     d  details     q  quit[0m
+  [38;2;232;238;246m[0m
+  [38;2;111;232;191mdiskpick › [0m

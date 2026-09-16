@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "areas": [
+    {"id":"rust", "title":"Rust incremental sessions", "kind":"rust", "roots":[], "description":"Older finalized sessions. Keeps newest + working sessions."},
+    {"id":"browser-http", "title":"Test browser · HTTP", "kind":"browser", "cache":"Cache", "description":"Cold HTTP cache only. Keeps logins and local storage."},
+    {"id":"browser-code", "title":"Test browser · code", "kind":"browser", "cache":"Code Cache", "description":"Cold compiled JavaScript cache. Regenerated on demand."},
+    {"id":"browser-gpu", "title":"Test browser · GPU", "kind":"browser", "cache":"GPUCache", "description":"Cold graphics cache. Keeps browser profiles."},
+    {"id":"packages", "title":"Package download stores", "kind":"inspect", "roots":["~/.bun/install/cache","~/.cache/uv","~/.npm/_cacache"], "description":"Inspect only. Package managers own their cleanup rules."}
+  ]
+}
