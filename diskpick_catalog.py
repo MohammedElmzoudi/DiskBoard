@@ -9,7 +9,7 @@ import stat
 import time
 import diskpick_engine as engine
 
-CONFIG = Path.home()/'.config/areas.json'
+CONFIG = Path.home()/'.config/diskpick/areas.json'
 
 
 def validate(data):
