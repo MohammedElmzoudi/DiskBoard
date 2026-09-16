@@ -55,7 +55,7 @@ Rust paths are **not guessed**. Configure your project's `target/debug` first. P
 
 ## Add or remove areas
 
-`diskpick config` prints the user configuration and shipped template paths. Copy the template to `~/.config/areas.json` and edit the `areas` array. The user catalog replaces the default catalog completely, so removing an entry removes it from the picker. No restart or rebuild is needed.
+`diskpick config` prints the user configuration and shipped template paths. Copy the template to `~/.config/diskpick/areas.json` and edit the `areas` array. The user catalog replaces the default catalog completely, so removing an entry removes it from the picker. No restart or rebuild is needed.
 
 ```json
 {
