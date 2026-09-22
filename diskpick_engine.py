@@ -162,7 +162,11 @@ def idle(path, compilers=False):
         raise Unsafe('compiler/build process is running')
     if str(path) in commands:
         raise Unsafe('a running process refers to this directory')
-    result = run(['/usr/sbin/lsof', '-nP', '-F', 'n', '+D', str(path)], timeout=30)
+    # Our descriptor-based traversal intentionally holds this directory open.
+    # Exclude only this process; -a intersects the PID and directory filters.
+    # Every other process still blocks cleanup, including child processes.
+    result = run(['/usr/sbin/lsof', '-nP', '-a', '-p', '^' + str(os.getpid()),
+                  '-F', 'n', '+D', str(path)], timeout=30)
     if result.returncode != 1 or result.stdout or result.stderr:
         raise Unsafe('directory is open or open-file inspection was uncertain')
 
@@ -203,24 +207,37 @@ class Cleaner:
 
     def skip(self, path, exc):
         self.skipped += 1
-        print('SKIP', path, '-', exc, flush=True)
+        if not getattr(self,'quiet',False):print('SKIP', path, '-', exc, flush=True)
         self.log('skip', path=str(path), reason=str(exc))
 
+    def check_idle(self, path, compilers=False):
+        # Preview-only memoization. Applying always rechecks every candidate.
+        seen=getattr(self,'preview_idle',set())
+        key=(str(path),compilers)
+        if not self.apply and key in seen:return
+        idle(path,compilers)
+        seen.add(key);self.preview_idle=seen
+
     def clean_tree(self, path, activity_root, age, compilers=False):
+        allowed=getattr(self, "allowed_paths", None)
+        if allowed is not None and str(path) not in allowed:
+            self.skip(path, "Not in the confirmed preview; refresh to select it")
+            return
         if self.reserve_met():
             return
+        getattr(self,'activity_guard',lambda:None)()
         with directory(path) as fd:
             before, size = snapshot(fd)
             if not any(stat.S_ISREG(v[2]) for v in before.values()):
                 return
             if max(v[5] for v in before.values()) > (time.time() - age) * 1e9:
                 raise Unsafe('cache has recently modified files')
-            idle(activity_root, compilers)
+            self.check_idle(activity_root, compilers)
             if snapshot(fd)[0] != before:
                 raise Unsafe('tree changed while checking activity')
             self.candidates += 1
             self.allocated += size
-            print(('CLEAN' if self.apply else 'WOULD CLEAN'),
+            if not getattr(self,'quiet',False):print(('CLEAN' if self.apply else 'WOULD CLEAN'),
                   '%.3f GiB' % (size/GIB), path, flush=True)
             self.log('candidate', path=str(path), allocated_bytes=size)
             if self.apply:
@@ -228,7 +245,8 @@ class Cleaner:
                 with directory(path) as current:
                     if os.fstat(current).st_ino != os.fstat(fd).st_ino:
                         raise Unsafe('cache directory replaced')
-                idle(activity_root, compilers)
+                getattr(self,'activity_guard',lambda:None)()
+                self.check_idle(activity_root, compilers)
                 if self.reserve_met():
                     return
                 remove_contents(fd, before,
@@ -297,4 +315,3 @@ class Cleaner:
 def free_bytes():
     s = os.statvfs(HOME)
     return s.f_bavail * s.f_frsize
-

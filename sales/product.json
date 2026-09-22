@@ -1,0 +1,30 @@
+{
+  "slug": "diskboard",
+  "name": "DiskBoard",
+  "version": "0.1.0-rc.1",
+  "price_minor": 0,
+  "currency": "USD",
+  "billing": "free",
+  "platform": "macOS",
+  "license": "MIT",
+  "sales_enabled": false,
+  "checkout_url": null,
+  "download_url": null,
+  "includes": [
+    "Terminal app source",
+    "Mac launcher",
+    "Setup guide",
+    "Local cleanup safety checks",
+    "Automatic updates for clean official Git installations"
+  ],
+  "requires": [
+    "Python 3.9+",
+    "tmux for split panes",
+    "Claude Code or Codex CLI and the user's own agent account"
+  ],
+  "excludes": [
+    "Agent usage or subscription",
+    "BentoBoard license",
+    "Guaranteed storage recovery"
+  ]
+}

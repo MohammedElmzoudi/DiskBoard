@@ -1,4 +1,5 @@
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextlib
 import fcntl
 import io
@@ -25,12 +26,15 @@ def disk():
 
 def scan(areas,quiet=False):
     rows=[]
-    for i,area in enumerate(areas,1):
-        if sys.stdout.isatty() and not quiet:
-            print('\r  Checking %d/%d · %-40s'%(i,len(areas),area['title']),end='',flush=True)
-        rows.append(catalog.scan(area))
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        pending={pool.submit(catalog.scan,a):a for a in areas}
+        for future in as_completed(pending):
+            rows.append(future.result())
+            if sys.stdout.isatty() and not quiet:
+                print('\r  Measured %d/%d · %-40s'%(len(rows),len(areas),ui.safe(pending[future]['title'])[:40]),end='',flush=True)
     if sys.stdout.isatty() and not quiet:print('\r'+' '*85+'\r',end='')
-    return rows
+    # Put actionable recovery first, then the largest monitored areas.
+    return sorted(rows,key=lambda r:(-r['eligible_bytes'],-(r['total_bytes'] or 0),r['area']['id']))
 
 
 @contextlib.contextmanager
@@ -54,7 +58,7 @@ def audit():
         finally:os.close(lock)
 
 
-def clean(areas):
+def clean(areas, approved_paths=None):
     if sys.platform!='darwin' or os.geteuid()==0:
         raise ValueError('Cleanup currently supports macOS as your normal user. Do not use sudo.')
     results=[]
@@ -63,13 +67,14 @@ def clean(areas):
         log('start',area_ids=[a['id'] for a in areas],free_bytes=before)
         for area in areas:
             if area['kind']=='inspect':
-                results.append(dict(id=area['id'],status='manual',completed=0))
+                results.append(dict(id=area['id'],status='inspect-only',completed=0))
                 continue
             events=[]
             def record(event,**kw):
                 log(event,area_id=area['id'],**kw)
                 events.append(dict(event=event,**kw))
             cleaner=engine.Cleaner(True,record)
+            cleaner.allowed_paths=approved_paths
             with contextlib.redirect_stdout(io.StringIO()):
                 catalog.execute_handler(area,cleaner)
             completed=sum(e['event']=='completed' for e in events)
@@ -81,75 +86,48 @@ def clean(areas):
     return dict(results=results,free_bytes=after,net_change_bytes=after-before,audit=str(path))
 
 
-def demo_rows():
-    # Explicit synthetic data: no filesystem scanning or deletion in this mode.
-    entries=[('rust','Rust incremental sessions',18.6,6.2,'READY'),
-             ('browser-http','Test browser · HTTP',2.4,1.8,'READY'),
-             ('browser-code','Test browser · code',0.84,0,'RECENT'),
-             ('browser-gpu','Test browser · GPU',0.32,0.32,'READY'),
-             ('packages','Package download stores',4.6,0,'MANUAL'),
-             ('ad-qa','Advertisement exports + QA',24.2,0,'MANUAL'),
-             ('worktrees','Development worktrees',13.9,0,'MANUAL')]
-    return [dict(area=dict(id=id,title=title,description='Demonstration data; no files are deleted.',kind='inspect'),
-                 total_bytes=int(total*engine.GIB),eligible_bytes=int(eligible*engine.GIB),
-                 candidates=int(eligible>0),status=status,reasons=[])
-            for id,title,total,eligible,status in entries]
-
-
-def interactive(areas,demo=False):
-    notice=''
-    rows=demo_rows() if demo else scan(areas)
-    free,total=(12.4*engine.GIB,460*engine.GIB) if demo else disk()
-    while True:
-        if sys.stdout.isatty():print('\033[2J\033[H',end='')
-        ui.dashboard(rows,free,total,notice,demo)
-        try:value=ui.prompt().strip()
-        except EOFError:return 0
-        if value.lower() in {'q','quit','exit'}:return 0
-        if value.lower()=='d':
-            ui.details(rows)
-            input('\n  Enter to return ')
-            continue
-        if value.lower()=='r':
-            rows=demo_rows() if demo else scan(areas)
-            free,total=(12.4*engine.GIB,460*engine.GIB) if demo else disk()
-            notice='Refreshed. No files deleted.'
-            continue
-        try:
-            indices=catalog.parse_selection(value,len(rows))
-            selected=[rows[n-1] for n in indices]
-            if demo:
-                recovered=sum(r['eligible_bytes'] for r in selected)
-                for row in selected:
-                    row['total_bytes']-=row['eligible_bytes']
-                    row['eligible_bytes']=0
-                    if row['status']=='READY':row['status']='KEPT' if row['total_bytes'] else 'EMPTY'
-                free+=recovered
-                notice='DEMO · simulated %s recovery · no real files deleted'%ui.amount(recovered)
-            else:
-                print('  Rechecking selected areas before cleanup…',flush=True)
-                result=clean([r['area'] for r in selected])
-                count=sum(r['completed'] for r in result['results'])
-                notice='%d cache trees cleaned · net disk change %s · audit saved'%(count,ui.amount(result['net_change_bytes']))
-                rows=scan(areas)
-                free,total=disk()
-        except (ValueError,OSError,engine.Unsafe) as exc:
-            notice=str(exc)
-
-
 def main(argv=None):
     parser=argparse.ArgumentParser(description='Pick disposable caches. Keep the important.')
-    parser.add_argument('command',nargs='?',choices=['scan','clean','config','status'])
+    from diskpick_version import VERSION
+    parser.add_argument('--version',action='version',version='DiskBoard '+VERSION)
+    parser.add_argument('command',nargs='?',choices=['scan','clean','config','status','prompt','rules','frame'])
     parser.add_argument('--areas',help='Stable area IDs, comma or space separated (for agents)')
     parser.add_argument('--yes',action='store_true',help='Required for noninteractive cleanup')
     parser.add_argument('--json',action='store_true',help='Machine-readable output')
     parser.add_argument('--config',type=Path,help='Explicit area catalog')
     parser.add_argument('--demo',action='store_true',help='Interactive synthetic demo; never scans or deletes files')
+    parser.add_argument('--workbench',action='store_true',help='Storage UI only, without an agent pane')
+    parser.add_argument('--agent',choices=['claude','codex'],help='Start split panes with this CLI')
+    parser.add_argument('--resume',help='Reattach a retained diskpick agent workspace')
+    parser.add_argument('--report-demo',action='store_true',help='Agent report demo; no disk scan or deletion')
     args=parser.parse_args(argv)
+    if args.command=='frame':
+        if args.demo or args.report_demo or args.agent or args.resume or args.workbench or args.json or args.yes or args.areas or args.config:parser.error('frame accepts only JSON on standard input')
+        import diskpick_report
+        raw=sys.stdin.read(diskpick_report.MAX_BYTES+1)
+        if len(raw.encode('utf-8'))>diskpick_report.MAX_BYTES:raise ValueError('The report exceeds 256 KiB.')
+        try:data=diskpick_report.decode_json(raw)
+        except (json.JSONDecodeError,RecursionError) as exc:raise ValueError('Invalid report JSON.') from exc
+        print(diskpick_report.frame(data),end='')
+        return 0
+    if args.report_demo:
+        if args.command or args.demo or args.agent or args.resume or args.workbench or args.json or args.yes or args.areas:parser.error('--report-demo cannot be combined with other modes')
+        import diskpick_report_ui
+        return diskpick_report_ui.launch([],scan,clean,demo=True)
+    if args.command=='prompt':
+        if args.json or args.yes or args.areas or args.agent or args.resume or args.workbench:parser.error('prompt does not accept cleanup or pane options')
+        import diskpick_report
+        print(diskpick_report.prompt(diskpick_report.new_token(),args.config))
+        return 0
+    pane_options=args.workbench or args.agent or args.resume
+    if pane_options and (args.command or args.json or args.demo or args.areas or args.yes):parser.error('Pane options require the interactive workbench')
+    if sum(bool(x) for x in (args.workbench,args.agent,args.resume))>1:parser.error('Choose only one pane option')
+    if pane_options and not sys.stdin.isatty():parser.error('Pane options require an interactive terminal')
     if args.demo:
         if args.command or args.areas or args.yes or args.json:
             parser.error('--demo is only an isolated interactive demonstration')
-        return interactive([],demo=True)
+        import diskpick_tui
+        return diskpick_tui.launch([],scan,clean,demo=True)
     if args.command=='config':
         print(json.dumps({'user_config':str(catalog.CONFIG),'template':str(Path(catalog.__file__).with_name('areas.json'))},indent=2))
         return 0
@@ -158,6 +136,23 @@ def main(argv=None):
         print(json.dumps(dict(free_bytes=free,total_bytes=total)) if args.json else 'Free: '+ui.amount(free))
         return 0
     areas=catalog.load(args.config)
+    if args.command=='rules':
+        if args.yes or args.areas:parser.error('rules is read-only and does not accept cleanup options')
+        expanded=catalog.expand(areas)
+        print(json.dumps({'version':1,'notice':'Rules only. No size or safety check has run.', 'areas':[dict(a,paths=[str(p) for p in catalog.roots(a)]) for a in expanded]},indent=2))
+        return 0
+    if args.command is None and (args.areas or args.yes):parser.error('--areas and --yes require clean')
+    if args.command is None and not args.json and sys.stdin.isatty():
+        if not args.workbench:
+            import diskpick_panes
+            result=diskpick_panes.launch(args.agent,args.config,args.resume)
+            if result is not None:return result
+        import diskpick_report_ui
+        return diskpick_report_ui.launch(areas,scan,clean,config=args.config)
+    if args.command!='clean':areas=catalog.expand(areas)
+    elif args.areas:
+        requested=set(re.split(r'[\s,]+',args.areas.strip()))
+        if requested-set(a['id'] for a in areas):areas=catalog.expand(areas)
     if args.command=='clean':
         if not args.yes or not args.areas:
             parser.error('Noninteractive cleanup requires --areas <stable IDs> --yes')
@@ -172,9 +167,10 @@ def main(argv=None):
         rows=scan(areas,args.json)
         free,total=disk()
         if args.json:print(json.dumps(dict(free_bytes=free,total_bytes=total,areas=rows),indent=2))
-        else:ui.dashboard(rows,free,total)
+        else:
+            for page in range(max(1,(len(rows)+11)//12)):ui.dashboard(rows,free,total,page=page)
         return 0
-    return interactive(areas)
+    return 0
 
 
 def entry():

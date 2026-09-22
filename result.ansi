@@ -1,28 +1,48 @@
-1 4, 2
-[2J[H  [38;2;232;238;246m[0m
-  [38;2;111;232;191m◒  diskpick                                     STORAGE, WITH INTENTION.[0m
-  [38;2;140;153;173mPick the disposable. Keep the important.[0m
-  [38;2;140;153;173m────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
-  [38;2;232;238;246mFREE  20.72 GiB        ELIGIBLE  0 KiB            RESERVE  40 GiB[0m
-  [38;2;245;199;111m▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱   95% used  ·  19.28 GiB below reserve[0m
-  [38;2;245;199;111mDEMO DATA · synthetic preview; not your disk[0m
-  [38;2;140;153;173m────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
-  [38;2;140;153;173m #   AREA                                                           ON DISK    ELIGIBLE   STATE[0m
-  [38;2;232;238;246m[0m
-  [38;2;140;153;173m 1   Rust incremental sessions                                    12.40 GiB       0 KiB   KEPT[0m
-  [38;2;140;153;173m 2   Test browser · HTTP                                          614.4 MiB       0 KiB   KEPT[0m
-  [38;2;245;199;111m 3   Test browser · code                                          860.2 MiB       0 KiB   RECENT[0m
-  [38;2;140;153;173m 4   Test browser · GPU                                               0 KiB       0 KiB   EMPTY[0m
-  [38;2;140;153;173m 5   Package download stores                                       4.60 GiB       0 KiB   MANUAL[0m
-  [38;2;140;153;173m 6   Advertisement exports + QA                                   24.20 GiB       0 KiB   MANUAL[0m
-  [38;2;140;153;173m 7   Development worktrees                                        13.90 GiB       0 KiB   MANUAL[0m
-  [38;2;232;238;246m[0m
-  [38;2;140;153;173m────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
-  [38;2;140;153;173mREADY = eligible now. Busy/recent items are kept. MANUAL = inspect only.[0m
-  [38;2;140;153;173mSelection rechecks files + locks. Source, logins and working caches stay.[0m
-  [38;2;111;232;191mDEMO · simulated 8.32 GiB recovery · no real files deleted[0m
-  [38;2;232;238;246m[0m
-  [38;2;127;184;255mClean by number   1 4 2   or   1, 4, 2[0m
-  [38;2;140;153;173mr  refresh     d  details     q  quit[0m
-  [38;2;232;238;246m[0m
-  [38;2;111;232;191mdiskpick › [0m
+[?1049h[1;34r(B[m[4l[?7h[?1h=[39;49m[?25l[?1h=[?1000h[39;49m(B[m[H[2J
+  (B[0;1mDISKBOARD  /  Claude worktrees
+
+[3G(B[mOldest activity first · 6 shown / 6 total · timestamps estimate use
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+  (B[0;7m› Unused for at least 14 days  ·  Change filter                                                             
+[5G(B[mSelect all eligible worktrees
+[5GReview 0 selected worktrees
+[5GRefresh activity and safety checks
+[5G☐ 92d ago     3.80 GiB  READY  archived-search
+[5G☐ 63d ago     2.40 GiB  READY  old-table-polish
+[5G☐ 45d ago     1.20 GiB  KEEP   experiment-notes
+[5G☐ 32d ago     1.80 GiB  READY  review-flow
+[5G☐ 24d ago    921.6 MiB  KEEP   local-secrets
+[5G☐ 18d ago     2.10 GiB  KEEP   active-session[30;3HDEMO DATA · synthetic repository
+
+  (B[0;1m↑ ↓ Scroll   Space Select   Enter Details / Action   Esc Back
+[3G(B[m1 / 10[7;3H  Unused for at least 14 days  ·  Change filter[K
+  (B[0;7m› Select all eligible worktrees                                                                             [33;3H(B[m2[9G[8;3H  Select all eligible worktrees[K
+  (B[0;7m› Review 0 selected worktrees                                                                               [33;3H(B[m3[9G[9;3H  Review 0 selected worktrees[K
+  (B[0;7m› Refresh activity and safety checks                                                                        [33;3H(B[m4[9G[10;3H  Refresh activity and safety checks[K
+  (B[0;7m› ☐ 92d ago     3.80 GiB  READY  archived-search                                                            [30;3H(B[mBranch retained: feature/archived-search  |  /demo/project/.claude/worktrees/archived-search
+
+
+  5[9G[9;12H1
+
+[5G(B[0;7m☑[33;9H(B[m[10;3H(B[0;7m› Refresh activity and safety checks                                                                        
+[3G(B[m  ☑ 92d ago     3.80 GiB  READY  archived-search[K[30;3HDEMO DATA · synthetic repository[K
+
+
+  4[9G[9;3H(B[0;7m› Review 1 selected worktrees                                                                               
+[3G(B[m  Refresh activity and safety checks[K[33;3H3[9G[2;17H(B[0;1mReview selected worktrees
+
+[3G(B[m3.80 GiB selected · scroll the entire list before confirming[K
+
+
+  (B[0;7m› Back — keep everything                                                                                    
+[5G(B[mDelete these 1 reviewed checkouts
+    92d ago     3.80 GiB  READY  archived-search[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K[30d  Source checkout files will be removed. Git branches and recovery refs stay.[32;16H(B[0;1mEnter Inspect / Confirm   Esc Cancel(B[m[K
+  1 / 3[K

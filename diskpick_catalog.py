@@ -8,8 +8,13 @@ import re
 import stat
 import time
 import diskpick_engine as engine
+import diskpick_discovery as discovery
+import subprocess
+from concurrent.futures import ThreadPoolExecutor
 
 CONFIG = Path.home()/'.config/diskpick/areas.json'
+DISABLED=set()
+DISCOVER=True
 
 
 def validate(data):
@@ -19,8 +24,9 @@ def validate(data):
     for area in data['areas']:
         if not isinstance(area, dict):
             raise ValueError('Each area must be an object')
-        if set(area) - {'id','title','kind','roots','cache','description'}:
+        if set(area) - {'id','title','kind','roots','cache','description','min_idle_days'}:
             raise ValueError('Unknown area field; executable commands are not supported')
+        if 'min_idle_days' in area and (area.get('kind')!='worktree' or type(area['min_idle_days']) is not int or not 0<=area['min_idle_days']<=36500):raise ValueError('Invalid idle-day threshold')
         key = area.get('id', '')
         if not re.fullmatch(r'[a-z][a-z0-9-]{0,39}', key) or key in seen:
             raise ValueError('Area IDs must be unique lowercase names')
@@ -29,8 +35,12 @@ def validate(data):
             value = area.get(field, '')
             if not isinstance(value, str) or not value or len(value)>180 or not value.isprintable():
                 raise ValueError('Area %s needs a printable %s' % (key, field))
-        if area.get('kind') not in {'rust','browser','inspect'}:
+        if area.get('kind') not in {'rust','browser','inspect','downloads','generated','worktree'}:
             raise ValueError('Unknown handler kind for '+key)
+        if area['kind']=='downloads' and (area['id'] not in discovery.DOWNLOADS or area.get('roots')):
+            raise ValueError('Download handlers use fixed built-in paths')
+        if area['kind'] in {'generated','worktree'} and len(area.get('roots',[]))!=1:
+            raise ValueError('Generated build areas require one checkout root')
         roots = area.get('roots', [])
         if not isinstance(roots, list) or any(not isinstance(p,str) or not p.isprintable() for p in roots):
             raise ValueError('roots must be a list of paths')
@@ -53,39 +63,30 @@ def load(path=None):
         chosen = Path(__file__).with_name('areas.json')
     if chosen.is_symlink():
         raise ValueError('Config must not be a symlink')
-    return validate(json.loads(chosen.read_text()))
+    data=json.loads(chosen.read_text())
+    global DISABLED,DISCOVER
+    disabled=data.get('disabled',[])
+    if not isinstance(disabled,list) or any(not isinstance(x,str) for x in disabled):raise ValueError('disabled must be a list of area IDs')
+    DISABLED=set(disabled);DISCOVER=data.get('discovery',True) is not False
+    return [a for a in validate(data) if a['id'] not in DISABLED]
 
 
 def size(path, deadline):
     """Bounded, non-following inventory. None means incomplete, not zero."""
-    total = 0
+    try:path.lstat()
+    except FileNotFoundError:return 0
+    except OSError:return None
     try:
-        with engine.directory(path) as root:
-            device = os.fstat(root).st_dev
-            def visit(fd):
-                nonlocal total
-                if time.monotonic()>deadline:
-                    raise TimeoutError()
-                for name in os.listdir(fd):
-                    if time.monotonic()>deadline:
-                        raise TimeoutError()
-                    st = os.stat(name,dir_fd=fd,follow_symlinks=False)
-                    if st.st_dev != device:
-                        raise OSError('nested filesystem')
-                    if stat.S_ISREG(st.st_mode):
-                        total += st.st_blocks*512
-                    elif stat.S_ISDIR(st.st_mode):
-                        with engine.child_directory(fd,(name,)) as child:
-                            visit(child)
-            visit(root)
-    except FileNotFoundError:
-        return 0
-    except (OSError, TimeoutError, engine.Unsafe):
-        return None
-    return total
+        with engine.directory(path):
+            result=engine.run(['/usr/bin/du','-skx',str(path)],timeout=max(1,deadline-time.monotonic()))
+        if result.returncode or result.stderr:return None
+        return int(result.stdout.split()[0])*1024
+    except (OSError, ValueError, subprocess.TimeoutExpired, engine.Unsafe):return None
 
 
 def roots(area):
+    if area['kind']=='worktree':return [Path(p).expanduser() for p in area['roots']]
+    if area['kind'] in {'downloads','generated','worktree'}:return discovery.targets(area)
     if area['kind']=='browser':
         base=engine.PROFILES
         try:
@@ -98,6 +99,12 @@ def roots(area):
 
 
 def execute_handler(area, cleaner):
+    if area['kind']=='worktree':
+        discovery.retire_worktree(area,cleaner)
+        return
+    if area['kind'] in {'downloads','generated','worktree'}:
+        discovery.execute(area,cleaner)
+        return
     if area['kind']=='browser':
         cleaner.browsers(cache_names=(area['cache'],))
     elif area['kind']=='rust':
@@ -112,22 +119,25 @@ def execute_handler(area, cleaner):
 def scan(area):
     events=[]
     cleaner=engine.Cleaner(False, lambda event,**kw:events.append(dict(event=event,**kw)))
+    cleaner.quiet=True
     inventory_error=None
+    paths=[];sizes=[]
     try:
         paths=roots(area)
         if area['kind']=='rust':paths=[p/'incremental' for p in paths]
-        sizes=[size(p,time.monotonic()+3) for p in paths]
-        total=None if any(s is None for s in sizes) else sum(sizes)
-        if total is None:inventory_error='Inventory incomplete (access restriction or time limit); unknown is not zero.'
+        with ThreadPoolExecutor(max_workers=4) as inventory:
+            sizes=list(inventory.map(lambda p:size(p,time.monotonic()+120),paths))
+        counted=[n for p,n in zip(paths,sizes) if not any(parent!=p and parent in p.parents for parent in paths)]
+        total=None if any(n is None for n in counted) else sum(counted)
+        if total is None:inventory_error='Size unavailable: permission denied, changed folder, or 120-second timeout. Use details to see paths; nothing is assumed empty.'
         if area['kind']!='inspect':
-            with contextlib.redirect_stdout(io.StringIO()):
-                execute_handler(area,cleaner)
-    except (OSError,engine.Unsafe) as exc:
+            execute_handler(area,cleaner)
+    except (OSError,engine.Unsafe,subprocess.TimeoutExpired) as exc:
         inventory_error=str(exc)
         total=None
     reasons=[e['reason'] for e in events if e['event']=='skip']
     if inventory_error:reasons.append(inventory_error)
-    if area['kind']=='inspect':status='MANUAL'
+    if area['kind']=='inspect':status='BROWSE'
     elif area['kind']=='rust' and not area.get('roots'):status='SETUP'
     elif cleaner.candidates:status='READY'
     elif total==0 and not reasons:status='EMPTY'
@@ -135,7 +145,9 @@ def scan(area):
     elif reasons:status='SKIPPED'
     else:status='KEPT'
     return dict(area=area,total_bytes=total,eligible_bytes=cleaner.allocated,
-                candidates=cleaner.candidates,status=status,reasons=reasons)
+                candidates=cleaner.candidates,status=status,reasons=reasons,
+                paths=[dict(path=str(p),bytes=n) for p,n in zip(paths,sizes)],
+                preview=[e for e in events if e['event']=='candidate'])
 
 
 def parse_selection(text, count):
@@ -151,3 +163,27 @@ def parse_selection(text, count):
         if value not in values:values.append(value)
     if not values:raise ValueError('Choose at least one area')
     return values
+
+
+def expand(areas):
+    areas=list(areas)
+    if not DISCOVER:return areas
+    known={a['id'] for a in areas}
+    # New built-ins are opt-in through selection; scanning never deletes.
+    areas += [a for a in discovery.presets() if a['id'] not in known]
+    for key,title,root in [('downloads-folder','Downloads (personal files)','~/Downloads'),('docker-data','Docker virtual disk','~/Library/Containers/com.docker.docker'),('app-caches','Application caches','~/Library/Caches'),('developer-tools','Xcode and developer data','~/Library/Developer'),('agent-history','Agent history and workspaces','~/.codex')]:
+        if key not in known:
+            areas.append(dict(id=key,title=title,kind='inspect',roots=[root],description='Size monitor only. May contain valuable data; never deleted by diskpick.'))
+    paths=discovery.worktrees()
+    if paths:
+        areas=[a for a in areas if a['id']!='worktrees']
+        areas.append(dict(id='worktrees',title='Development worktrees',kind='inspect',roots=[str(p) for p in paths],description='Registered checkouts. Browse individual sizes; source and worktrees are never automatically deleted.'))
+        areas += [a for a in discovery.generated_areas(paths) if a['id'] not in known]
+        for p in paths:
+            if re.fullmatch(r'main(?:[0-9]+|-master)?',p.name):continue
+            if not (p/'.git').is_file():continue
+            born=getattr(p.stat(),'st_birthtime',time.time())
+            if time.time()-born<7*86400:continue
+            key='retire-'+discovery.hashlib.sha256(str(p).encode()).hexdigest()[:12]
+            if key not in known:areas.append(dict(id=key,title='Retire checkout · '+p.name,kind='worktree',roots=[str(p)],description='Removes only a clean, idle linked checkout older than 7 days with NO ignored files. Retains its Git branch and commits.'))
+    return [a for a in areas if a['id'] not in DISABLED]

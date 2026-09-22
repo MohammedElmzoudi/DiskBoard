@@ -1,0 +1,106 @@
+[?1049h[22;0;0t[?1h=[H[2J[?12l[?25h[?1000l[?1002l[?1003l[?1006l[?1005l[?2004h[?2031h[?996n(B[m[?12l[?25h[?1006l[?1000l[?1002l[?1003l[1;1H[1;42r[c[>c[>q]10;?\]11;?\[22;9H[?25l[?1006l[?1000l[?1002l[?1003l[?1006h[?1000h[?1002h[H[1m──[23;1H──(B[m[1m[1d diskpick · storage workbench ────────────────────────────────────────────────────────────────────────────────(B[m[23;3H Codex or Claude CLI · demo stand-in ─────────────────────────────────────────────────────────────────────────[1;1H(B[m
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K[19;2H[1K[CDEMO DATA. No disk scan or deletion is available.[K
+[K
+  [1m↑ ↓ Move  Enter Open  Space Select  Shift+↑/↓ Pane  Esc Exit(B[m[K[22;2H[1K[C1 / 10[K[24;1HAGENT TERMINAL — DEMO STAND-IN (no AI request sent)[K
+Working folder: diskpick source repository[K
+Paste the scan prompt here to make a new disk report.[K
+agent > [K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+ diskpick 0:zsh*[39X[39CShift+↑/↓ switch | Ctrl+b r reload top | Ctrl+b d detach [22;9H[18t[14t(B[m[?12l[?25h[?1006l[?1000l[?1002l[?1003l[1;1H[1;42r[22;9H[?25l[?1006l[?1000l[?1002l[?1003l[?1006h[?1000h[?1002h[H[1m──[23;1H──(B[m[1m[1d diskpick · storage workbench ────────────────────────────────────────────────────────────────────────────────(B[m[23;3H Codex or Claude CLI · demo stand-in ─────────────────────────────────────────────────────────────────────────[1;1H(B[m
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K[19;2H[1K[CDEMO DATA. No disk scan or deletion is available.[K
+[K
+  [1m↑ ↓ Move  Enter Open  Space Select  Shift+↑/↓ Pane  Esc Exit(B[m[K[22;2H[1K[C1 / 10[K[24;1HAGENT TERMINAL — DEMO STAND-IN (no AI request sent)[K
+Working folder: diskpick source repository[K
+Paste the scan prompt here to make a new disk report.[K
+agent > [K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+ diskpick 0:zsh*[39X[39CShift+↑/↓ switch | Ctrl+b r reload top | Ctrl+b d detach [22;9H[2;22r[1;1H[3;22r[20S[2;1H[K
+  [1mDISKPICK  /  Agent disk report · DEMO[5;3H(B[mFree 18.00 GiB · Build files use most of the measured space. One folder could not be measured.
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────[8;1H  [7m› Copy a new scan prompt                                                                                    [9;5H(B[mCheck and review selected paths (0)[10;5HRead scan notes[11;5HOpen local cleanup tools[12;5H▾ Project build files  14.00 GiB[13;7H☐ Old build output  12.00 GiB  CHECK[14;7H☐ Project source  2.00 GiB  KEEP[15;5H▾ App data  3.00 GiB + unmeasured[16;7H☐ Test cache  3.00 GiB  INSPECT[17;7H☐ Private app data  Not measured  KEEP
+  DEMO DATA. No disk scan or deletion is available.[20;1H  [1;42r[20;3H[1m↑ ↓ Move  Enter Open  Space Select  Shift+↑/↓ Pane  Esc Exit[21;3H(B[m1 / 10[H[1m──[23;1H──(B[m[1m[1d diskpick · storage workbench ────────────────────────────────────────────────────────────────────────────────(B[m[23;3H Codex or Claude CLI · demo stand-in ─────────────────────────────────────────────────────────────────────────[1;1H(B[m[42d diskpick 0:Python*                                    Shift+↑/↓ switch | Ctrl+b r reload top | Ctrl+b d detach [21;9H[H──[23;1H[1m──(B[m[1d diskpick · storage workbench ────────────────────────────────────────────────────────────────────────────────(B[m[1m[23;3H Codex or Claude CLI · demo stand-in ─────────────────────────────────────────────────────────────────────────[1;1H(B[m[27;9H[?12l[?25h[?25l[H[1m──[23;1H──(B[m[1m[1d diskpick · storage workbench ────────────────────────────────────────────────────────────────────────────────(B[m[23;3H Codex or Claude CLI · demo stand-in ─────────────────────────────────────────────────────────────────────────[1;1H(B[m[?12l[?25h[21;9H[?25l[H[1m──[23;1H──(B[m[1m[1d diskpick · storage workbench ────────────────────────────────────────────────────────────────────────────────(B[m[23;3H Codex or Claude CLI · demo stand-in ─────────────────────────────────────────────────────────────────────────[1;1H(B[m
+[K
+  [1mDISKPICK  /  Agent disk report · DEMO(B[m[K
+[K[5;2H[1K[CFree 18.00 GiB · Build files use most of the measured space. One folder could not be measured.[K
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────[K
+[K
+  [7m› Copy a new scan prompt                                                                                    (B[m[K[9;4H[1K[CCheck and review selected paths (0)[K[10;4H[1K[CRead scan notes[K[11;4H[1K[COpen local cleanup tools[K[12;4H[1K[C▾ Project build files  14.00 GiB[K[13;6H[1K[C☐ Old build output  12.00 GiB  CHECK[K[14;6H[1K[C☐ Project source  2.00 GiB  KEEP[K[15;4H[1K[C▾ App data  3.00 GiB + unmeasured[K[16;6H[1K[C☐ Test cache  3.00 GiB  INSPECT[K[17;6H[1K[C☐ Private app data  Not measured  KEEP[K
+  DEMO DATA. No disk scan or deletion is available.[K
+[K
+  [1m↑ ↓ Move  Enter Open  Space Select  Shift+↑/↓ Pane  Esc Exit(B[m[K[21;2H[1K[C1 / 10[K
+[K[2BAGENT TERMINAL — DEMO STAND-IN (no AI request sent)[K
+Working folder: diskpick source repository[K
+Paste the scan prompt here to make a new disk report.[K
+agent > [K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K
+ diskpick 0:Python*                                    Shift+↑/↓ switch | Ctrl+b r reload top | Ctrl+b d detach [21;9H

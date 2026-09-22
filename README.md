@@ -1,47 +1,76 @@
+# DiskBoard — free disk cleanup review
+
+Formerly diskpick. Use the copyable commands below, then run `diskboard`. [Update checks and automatic Git updates](UPDATES.md).
+
 # diskpick
 
 **Pick disposable caches. Keep the important.**
 
-A small, dependency-free macOS terminal tool for inspecting storage and cleaning selected disposable caches. Run one command, see the areas, and enter numbers separated by spaces or commas.
+A macOS terminal app that turns a Claude or Codex disk report into a grouped storage browser. Read the explanation for each path. Select items for a local safety check. Review the exact paths before removal.
 
 ```sh
 diskpick
-# At the prompt: 1 4, 2
+# Arrow keys navigate; Space selects; Enter opens a review.
 ```
 
-![The diskpick picker](picker.png)
+![The agent disk report](report.png)
 
 Screenshots show **real CLI output captured from a pseudo-terminal and rendered with xterm.js**, using explicitly synthetic demo data. The demo never scans or deletes personal files.
 
 ## Install
 
-Requires macOS, Python 3.9+, and the standard `ps` / `lsof` utilities. No runtime Python packages, package manager, network access or sudo are needed.
+Requires macOS, Python 3.9+, and the standard `ps` / `lsof` utilities. Split panes require tmux and your chosen Claude or Codex CLI. diskpick uses PATH first. If a tool is missing from PATH, it checks common install folders and the Codex/ChatGPT app bundles. The standalone workbench requires no Python packages or network access. Agent CLIs retain their own authentication and network requirements.
+
+For the default macOS shell (zsh), copy both lines together:
 
 ```sh
-git clone https://github.com/MohammedElmzoudi/diskpick.git
-cd diskpick
-sh install.sh
-diskpick
+git clone https://github.com/MohammedElmzoudi/DiskBoard.git "$HOME/.local/share/DiskBoard" &&
+mkdir -p "$HOME/.local/bin" && ln -s "$HOME/.local/share/DiskBoard/diskboard.py" "$HOME/.local/bin/diskboard" && printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "${ZDOTDIR:-$HOME}/.zshrc" && export PATH="$HOME/.local/bin:$PATH"
 ```
 
-The installer creates `~/.local/bin/diskpick`, pointing to this folder. Keep the folder where you installed it. It does not edit your shell profile or overwrite a different existing command. If that directory is not on your PATH, use `~/.local/bin/diskpick`.
+Run `diskboard` from any folder in this terminal or a new zsh terminal. These commands clone the source, create a command link, and add `~/.local/bin` to PATH in your zsh settings. They do not run an installer or use sudo. An existing destination stops setup instead of replacing files. Keep the source folder in place. For another shell, add `~/.local/bin` to that shell's PATH.
 
-You can also run `python3 diskpick.py` directly. The whole tool lives in this one portable folder.
+The existing `sh install.sh` option creates a launcher but does not change PATH. Internal settings and legacy commands keep their diskpick names.
 
-## Interactive controls
+## Interactive workbench
 
-| Input | Action |
-|---|---|
-| `1 4 2` or `1,4,2` | Recheck and clean eligible contents of those areas |
-| `r` | Rescan |
-| `d` | Show descriptions and reasons items were kept |
-| `q` | Quit |
+Run `diskpick`, choose **Claude CLI** or **Codex CLI**, and get two live terminals. The top pane is the report browser. The bottom pane is your agent, started in the diskpick source directory. Select **Copy a new scan prompt**. Press **Shift+Down**, paste the prompt, and send it. A complete JSON report updates the top pane automatically.
 
-Entering valid numbers is the cleanup instruction; there is no second confirmation. Invalid or out-of-range input rejects the whole selection. Duplicate numbers are processed once. Nothing is deleted just by launching the tool.
+Expand groups with Enter. Use Space to select CHECK items or a group of CHECK items. Read each path, description, restore method, and evidence. Select **Check and review selected paths** to run the local checks before removal. Agent estimates never grant deletion permission. INSPECT and KEEP paths cannot be selected.
 
-`READY` means something is eligible now. `RECENT`, `SKIPPED`, and `KEPT` indicate preserved contents. `SETUP` means a path needs configuring. `MANUAL` areas are **read-only inventory**, even when selected. `unknown` means the bounded inventory could not finish or access a path; it never means zero.
+See [REPORTS.md](REPORTS.md) for the prompt, report format, limits, and safety boundary. The prompt asks for ASD-STE100 Simplified Technical English. No paid diskpick service or API key is required; your agent provider may charge for its use.
 
-![The result screen](result.png)
+**Open local cleanup tools** keeps the existing Claude worktree and cache browsers available. Choose **Workbench only** to reach these tools without starting an agent. The worktree view groups registered `.claude/worktrees` checkouts by root repository.
+
+1. Choose a repository.
+2. Change **Unused for at least … days** (default 14).
+3. Scroll oldest activity first. **Space** toggles eligible rows; **Enter** shows path, branch, activity evidence and safety reason. Page Up/Down, Home/End and supported mouse wheels scroll too.
+4. Open **Review selected worktrees** to inspect just the selected list, then explicitly confirm removal. Escape cancels.
+
+Last activity is an **estimate** based on working-file modifications, worktree Git metadata and matching local Claude session files. It is not access time and cannot prove when somebody last read a checkout. Unknown or incomplete activity inspection blocks deletion. The chosen idle-day threshold is checked again before removal.
+
+**Staged changes, unstaged changes, untracked files, ignored local data, active processes, recent creation (under seven days), detached HEAD and protected base checkouts block retirement.** There is no force-delete option. Branches, commits and an additional Git recovery reference remain; the audit records recovery information.
+
+The review uses your terminal's default foreground/background with reverse-video focus, so cream and dark themes remain readable. The screenshot below is a real PTY capture with synthetic data, not a report of your disk.
+
+![Selected-worktree review](result.png)
+
+Cache cleanup also uses arrows, Space and a path preview. Read-only inventory remains available with `diskpick scan --json`. Initial inspection can take time on large checkouts; it never treats a failed scan as empty or safe.
+
+## Agent workspace
+
+- **Shift + ↑ / ↓:** switch between the top workbench and bottom agent terminal.
+- **Ctrl+b, then r:** reload only the top UI after the agent changes diskpick.
+- **Ctrl+b, then d:** detach while leaving the agent running. The terminal prints `diskpick --resume workspace-…` to reconnect.
+- **Ctrl+b, then z:** temporarily zoom the focused pane if your terminal is small.
+
+`diskpick --agent claude` or `diskpick --agent codex` skips the chooser. `diskpick --workbench` opens the top pane alone; use **Open local cleanup tools** without an agent. `scan`, `clean`, and JSON automation commands never start an agent.
+
+The agent gets no automatic prompt and no extra privileges, model override, API proxy, or approval-bypass flags. The scan prompt asks for read-only work. You can separately ask the agent to edit this repository. This uses a dedicated tmux server (`diskpick-workbench`); your other tmux sessions and keybindings are not changed. Closing the top pane does not terminate the bottom agent. Exit the agent explicitly when you want it stopped; detach is not termination. A crashed/exited pane stays visible for inspection.
+
+![Split report and agent terminal](panes.png)
+
+The screenshot shows actual tmux terminals and a **labelled demo stand-in** in the agent pane. No AI request was sent for the screenshot. Your chosen CLI runs in that pane during normal use.
 
 ## What can be cleaned?
 
@@ -49,13 +78,16 @@ Entering valid numbers is the cleanup instruction; there is no second confirmati
 |---|---|---|
 | Rust incremental sessions | Superseded finalized sessions at least one hour old, under configured `target/debug` directories | Newest complete session per crate/configuration, working sessions, executables, object files, dependencies and release builds |
 | Test-browser HTTP/code/GPU cache | The three specific cache directories in inactive Playwright MCP profiles, untouched for 24 hours | Cookies, logins, Local Storage, IndexedDB, sessions, profiles, installed browsers and ordinary browser profiles |
+| Package downloads | Old npm, Bun, pip, Yarn and Homebrew download copies; minimum 7 days, owner idle | Installed dependencies, configuration and recent downloads |
+| Generated worktree caches | Git-ignored `main/site/static/js` and `node_modules/.cache`; checkout and cache older than 7 days, idle | Source, dependencies, recent or active work |
+| Retire linked checkout | Older than 7 days, idle, clean, named branch, no ignored or untracked files; interactive confirmation only | Base main worktrees, branch, commits and an extra recovery Git reference |
 | Inspect | Nothing; size/status only | Everything |
 
-Rust paths are **not guessed**. Configure your project's `target/debug` first. Package stores are read-only by default. Worktrees, source, ads, videos, checkpoints, databases, backups, Downloads, Trash, Docker storage, OS caches, swap and updater staging are not cleanup targets.
+Rust paths are **not guessed**. Configure your project's `target/debug` first. Download-cache presets and registered worktrees are discovered automatically. Full checkout retirement is deliberately stricter than Git: even ignored files block it. The journal records the branch and recovery ref; restore using `git worktree add <path> <branch>`. Ads, videos, checkpoints, databases, backups, personal Downloads, Trash, Docker storage, OS caches, swap and updater staging are monitoring-only or excluded.
 
 ## Add or remove areas
 
-`diskpick config` prints the user configuration and shipped template paths. Copy the template to `~/.config/diskpick/areas.json` and edit the `areas` array. The user catalog replaces the default catalog completely, so removing an entry removes it from the picker. No restart or rebuild is needed.
+`diskpick config` prints the user configuration and shipped template paths. Copy the template to `~/.config/diskpick/areas.json` and edit the `areas` array. The user catalog replaces the shipped entries. Discovery adds built-in download caches, storage monitors and registered-worktree options. Add `"disabled": ["npm-downloads", "area-id"]` at the top level to hide any discovered area, or `"discovery": false` to use only your catalog. No restart or rebuild is needed.
 
 ```json
 {
@@ -123,3 +155,15 @@ Tests use disposable temporary fixtures, including real deletion, symlink reject
 No background job, telemetry, automatic updater, or unattended cleanup is installed.
 
 MIT licensed.
+
+The first full inventory can take a few minutes on a large developer disk. Measurements run in parallel; cleanup refreshes only selected areas. Deleting generated build caches can slow the next development launch while they regenerate. The preview calls this out; keep those areas when you need a warm startup.
+
+## Missing CLI or PATH entry
+
+When diskpick finds an existing tool outside PATH, it asks **Add this tool to diskpick?** Choose **Yes** to remember its exact path, **No** to go back, or **Use once** to skip saving. Multiple links to the same executable appear only once.
+
+Yes changes only `~/.config/diskpick/tools.json`. It does not change shell files or PATH, create launcher links, install a duplicate copy, or change login settings. A saved location is checked on each launch. PATH keeps priority. The same setup flow supports tmux.
+
+If no tool is found, choose its executable manually, open the official installation guide, check again, or return to another option. diskpick does not download or execute an installer. A missing tmux does not block the local cleanup tools.
+
+Settings updates use a lock and atomic replacement. Symlinked, hardlinked, malformed, or busy settings are not overwritten. If saving fails, **Use once** is still available. Remove a tool entry from this diskpick-only settings file to forget it; installed software is not removed.

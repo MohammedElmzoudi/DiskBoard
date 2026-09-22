@@ -4,6 +4,7 @@ import io
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -223,6 +224,31 @@ class SafetyTests(unittest.TestCase):
             with mock.patch.object(s, 'run', side_effect=subprocess.TimeoutExpired('lsof', 30)):
                 with self.assertRaises(subprocess.TimeoutExpired):
                     s.idle(self.root)
+
+    @unittest.skipUnless(sys.platform == 'darwin', 'macOS lsof integration')
+    def test_real_lsof_allows_own_guard_but_blocks_other_process(self):
+        cache = self.tree()
+        self.old(cache)
+        child_code = ('import sys; from pathlib import Path; '
+                      'f=open(Path(sys.stdin.readline().strip())/"held", "w"); '
+                      'print("ready", flush=True); sys.stdin.read(); f.close()')
+        child = subprocess.Popen([sys.executable, '-c', child_code],
+                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                 text=True)
+        try:
+            child.stdin.write(str(cache) + '\n')
+            child.stdin.flush()
+            self.assertEqual(child.stdout.readline().strip(), 'ready')
+            with s.directory(cache), self.assertRaises(s.Unsafe):
+                s.idle(cache)
+        finally:
+            child.stdin.close()
+            child.wait(timeout=10)
+            child.stdout.close()
+        self.old(cache)
+        # Real cleanup in a disposable fixture, with no mocked activity checks.
+        s.Cleaner(True).clean_tree(cache, cache, 3600)
+        self.assertEqual(list(cache.iterdir()), [])
 
     def test_process_reference_blocks_cache(self):
         with mock.patch.object(s, 'processes', return_value=(set(), 'chrome '+str(self.root))):

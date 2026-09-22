@@ -1,0 +1,50 @@
+[?1049h[1;34r(B[m[4l[?7h[?1h=[39;49m[?25l[?1h=[?1000h[39;49m(B[m[H[2J
+  (B[0;1mDISKBOARD  /  Agent disk report · DEMO
+
+[3G(B[mFree 18.00 GiB · Build files use most of the measured space. One folder could not be measured.
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+  (B[0;7m› Copy a new scan prompt                                                                                    
+[5G(B[mCheck and review selected paths (0)
+[5GRead scan notes
+[5GOpen local cleanup tools
+[5GCheck for updates
+[5G▾ Project build files  14.00 GiB
+[7G☐ Old build output  12.00 GiB  CHECK
+[7G☐ Project source  2.00 GiB  KEEP
+[5G▾ App data  3.00 GiB + unmeasured
+[7G☐ Test cache  3.00 GiB  INSPECT
+[7G☐ Private app data  Not measured  KEEP[30;3HDEMO DATA. No disk scan or deletion is available.
+
+  (B[0;1m↑ ↓ Move  Enter Open  Space Select  Shift+↑/↓ Pane  Esc Exit
+[3G(B[m1 / 11[7;3H  Copy a new scan prompt[K
+  (B[0;7m› Check and review selected paths (0)                                                                       [33;3H(B[m2[9G[8;3H  Check and review selected paths (0)[K
+  (B[0;7m› Read scan notes                                                                                           [33;3H(B[m3[9G[9;3H  Read scan notes[K
+  (B[0;7m› Open local cleanup tools                                                                                  [33;3H(B[m4[9G[10;3H  Open local cleanup tools[K
+  (B[0;7m› Check for updates                                                                                         [33;3H(B[m5[9G[11;3H  Check for updates[K
+  (B[0;7m› ▾ Project build files  14.00 GiB                                                                          [30;3H(B[mThese folders contain files made by build tools.[K
+
+
+  6[9G[8;38H1[13;7H☑[33;9H[12;3H  ▾ Project build files  14.00 GiB[K
+  (B[0;7m›   ☑ Old build output  12.00 GiB  CHECK                                                                    [30;5H(B[mis folder contains files from earlier builds.[K
+
+
+  7[9G[2;17H(B[0;1mOld build output(B[m[K
+
+  Agent advice is not a safety check.[K
+
+
+  (B[0;7m› Path: /demo/project/target                                                                                
+[5G(B[mAgent estimate: 12.00 GiB[K
+[5GAgent assessment: rebuildable
+[5GThis folder contains files from earlier builds.
+[5GRestore: The build command creates these files again.
+[5GEvidence: The fixture has no active build process.
+    Local rule: demo-build[K
+[5GBack[K
+[K
+[K
+[K[30d[K
+
+[7G(B[0;1m Move   Enter  Open   Esc  Back(B[m[K
+  1 / 8[K

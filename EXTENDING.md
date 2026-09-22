@@ -11,10 +11,12 @@ Do not ship machine-specific paths, private inventories, audit logs, credentials
 ## Adding a new cleanup handler
 
 1. Document which tool owns the data and why each selected file is regenerable. Prefer the owning tool's supported maintenance API where it provides locking. Age alone does not prove disposability.
-2. Add a named handler to `catalog.validate`, `roots`, and `execute_handler`. Keep inventory separate from cleanup. Return unknown for inaccessible/incomplete inventories.
+2. Add a named handler to `catalog.validate`, `roots`, and `execute_handler`. Keep inventory separate from cleanup. Report a scan error with a reason for inaccessible/incomplete inventories.
 3. Reuse `engine` descriptor traversal, audit, snapshot and activity guards. Never weaken them to make an uncertain directory pass.
 4. Define concurrency behavior: locks, active-process detection, recent-file rules, and what happens if another process writes mid-run. If reliable coordination is unavailable, make it inspect-only.
 5. Add disposable-fixture tests proving exact scope, preservation of neighboring important data, dry-run behavior, changed-file handling, symlink/mount rejection, busy locks, missing permissions and audit failure. Add CLI selection tests.
 6. Update the README deletion table. Keep approval-sensitive media/checkpoints, source, databases and worktrees out of generic age-based deletion.
 
 There is no plugin interface that imports executable code from arbitrary user JSON. Adding a new destructive strategy requires a reviewed code change.
+
+Built-in `downloads` handlers accept only known IDs and fixed paths. `generated` accepts one checkout root but only fixed Git-ignored build-cache subpaths. `worktree` accepts one linked checkout root and always requires interactive preview approval; branches and recovery refs remain. Never add a force option. Use top-level `disabled` IDs or `discovery: false` to remove automatic options.
