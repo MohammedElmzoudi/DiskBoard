@@ -19,7 +19,9 @@ Screenshots show **real CLI output captured from a pseudo-terminal and rendered 
 
 Requires macOS, Python 3.9+, and the standard `ps` / `lsof` utilities. Split panes require tmux and your chosen Claude or Codex CLI. diskpick uses PATH first. If a tool is missing from PATH, it checks common install folders and the Codex/ChatGPT app bundles. The standalone workbench requires no Python packages or network access. Agent CLIs retain their own authentication and network requirements.
 
-For the default macOS shell (zsh), copy the complete block:
+For the macOS ZIP download, unzip it, open the **DiskBoard** folder, then double-click **Install DiskBoard.command**. Finder shows just that installer; the source files are in a hidden `.diskboard` folder. The installer verifies the included files, copies them to `~/.local/share/DiskBoard-installations/0.1.1`, creates `~/.local/bin/diskboard`, and adds that directory to your zsh or bash startup files. Open a **new Terminal window** and type `diskboard`. No sudo or cleanup scan runs during installation. Existing different commands and changed installation files are preserved. Python 3.9 or later is required; if it is missing, the installer explains what to install. macOS can also block an unsigned `.command` file downloaded from the internet; the installer does not bypass Gatekeeper. Internal settings and legacy entrypoints retain their diskpick names.
+
+For an automatic-update Git installation in the default macOS shell (zsh), copy the complete block:
 
 ```sh
 python3 -c 'import sys; raise SystemExit("Python 3.9+ required" if sys.version_info < (3, 9) else 0)' &&
@@ -32,7 +34,7 @@ printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "${ZDOTDIR:-$HOME}/.zshrc" 
 
 Then run `diskboard` from any folder. The commands check Python, clone the source, create a command link, and add `~/.local/bin` to PATH for current and new zsh terminals. No installer script or sudo. If either destination already exists, setup stops without replacing it; use `diskboard update` for an existing official installation. Keep the source folder in place.
 
-For a ZIP download, extract it and run `sh install.sh` inside its folder. That installer creates `~/.local/bin/diskboard` without editing your shell profile or overwriting a different command. Run `~/.local/bin/diskboard` if it is not on PATH. You can also run `python3 -B diskboard.py` directly. Internal settings and legacy entrypoints retain their diskpick names.
+
 
 ## Storage overview
 

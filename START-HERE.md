@@ -9,6 +9,8 @@ This folder contains DiskBoard for macOS. Keep the folder intact.
 - Cleanup supports macOS only. Windows cleanup is not supported.
 - This is a source-based terminal tool, not a signed or notarized native Mac app.
 
+The customer ZIP opens to a **DiskBoard** folder with one visible file: **Install DiskBoard.command**. Double-click it, then open a new Terminal window and type `diskboard`. The hidden `.diskboard` folder contains the application files. Installation copies them to a stable location; the extracted download can be moved or deleted afterward. Python 3.9 or later is required. macOS may block an unsigned downloaded script; do not disable Gatekeeper to proceed.
+
 ## Open the app
 
 Open Terminal in this folder and run:

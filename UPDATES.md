@@ -14,6 +14,6 @@ Run `diskboard` (or `~/.local/bin/diskboard`). On a normal interactive launch, i
 
 Updates skip checkouts with local changes, an unexpected origin, or a branch that does not track the matching origin branch. A divergent branch cannot update. No reset, force checkout, or cleanup command is used. Git hooks are disabled for update commands. Existing cleanup settings stay in their original diskpick folders.
 
-A ZIP download does not auto-update. Use the Git installation above for updates. Keep any existing folder with local edits; do not overwrite it. The official repository is `DiskBoard`; existing installations using its legacy `diskpick` URL are also accepted.
+A ZIP installation does not auto-update. Download and open a newer installer to update it. Use the Git installation above for automatic updates. Keep any existing folder with local edits; do not overwrite it. The official repository is `DiskBoard`; existing installations using its legacy `diskpick` URL are also accepted.
 
 Only run updates in a checkout that you control. Close editors that can change its files during an update. Updates download and run code from the official repository; review that trust before installation. Auto-checks run on a plain interactive launch, not during scans, cleanup, or an agent session.
