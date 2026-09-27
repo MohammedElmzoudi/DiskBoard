@@ -1,6 +1,7 @@
 """Keyboard/mouse workbench. Uses terminal default colors, never a fixed palette."""
 import curses
 import concurrent.futures
+import shutil
 import queue
 import threading
 import time
@@ -175,9 +176,9 @@ def review(screen,chosen):
 def cache_browser(screen,areas,scan,clean):
  rows=screen.wait('Scanning caches',lambda:scan([a for a in areas if a['kind']!='worktree'],True));index=0;selected=set()
  while True:
-  labels=['Review selected caches']+[('☑ ' if i in selected else '☐ ')+r['area']['title']+'  '+ui.amount(r['eligible_bytes'])+' eligible' for i,r in enumerate(rows)]
+  labels=['Review %d selected areas'%len(selected)]+[('☑ ' if i in selected else '☐ ')+('READY  ' if r['eligible_bytes'] else 'KEEP   ')+r['area']['title']+'  '+ui.amount(r['eligible_bytes']) for i,r in enumerate(rows)]
   r=rows[index-1] if index else None
-  screen.draw('Caches', 'Space selects · eligible bytes are estimates',labels,index,(r['area']['description'] if r else 'Select caches, then review their exact paths.'),'↑ ↓ Scroll   Space Select   Enter Review / Details   Esc Back')
+  screen.draw('Generated files and caches', '%d areas · %s potentially eligible · exact paths checked before removal'%(len(rows),ui.amount(sum(r['eligible_bytes'] for r in rows))),labels,index,(r['area']['description'] if r else 'READY is only a candidate. Select areas, then review exact paths.'),'↑ ↓ Move   Space Select   Enter Review / Details   Esc Back')
   index,k=screen.key(index,len(labels))
   if k==27:return
   if k==ord(' ') and index:
@@ -194,27 +195,6 @@ def cache_browser(screen,areas,scan,clean):
    if choice==1:
     result=screen.wait('Cleaning reviewed caches',lambda:clean(chosen,paths),mutating=True);screen.message('Complete','Net disk change '+ui.amount(result['net_change_bytes']));return
 
-def launch(areas,scan,clean,demo=False):
- def run(win):
-  screen=Screen(win)
-  if demo:
-   rows=[]
-   for name,age,size,reason in [('archived-search',92,3.8,''),('old-table-polish',63,2.4,''),('experiment-notes',45,1.2,'Uncommitted work: 0 staged, 1 unstaged, 0 untracked paths'),('review-flow',32,1.8,''),('local-secrets',24,0.9,'Ignored local data: 2 paths; preserved'),('active-session',18,2.1,'Active process holds this checkout open')]:
-    rows.append(dict(path='/demo/project/.claude/worktrees/'+name,name=name,days=age,timestamp=time.time()-age*86400,source='Claude session',branch='feature/'+name,bytes=int(size*engine.GIB),reason=reason))
-   tree_browser(screen,'DEMO DATA · synthetic repository',[],lambda *a:dict(results=[],net_change_bytes=0),rows)
-   return
-  while True:
-   choice=screen.menu('Storage workbench','Choose what you want to manage.',['Claude worktrees — choose a repository','Caches — review disposable data','Exit'])
-   if choice in (None,2):return
-   if choice==1:
-    expanded=screen.wait('Discovering cleanup areas',lambda:catalog.expand(areas))
-    cache_browser(screen,expanded,scan,clean);continue
-   groups=screen.wait('Finding root repositories',lambda:worktrees.repositories(discovery.worktrees()))
-   roots=sorted(groups)
-   claude={r:[p for p in groups[r] if '.claude/worktrees/' in str(p)] for r in roots}
-   roots=[r for r in roots if claude[r]]
-   if not roots:screen.message('No Claude worktrees found','Discovery checks registered Git worktrees under .claude/worktrees.');continue
-   choice=screen.menu('Choose a root repository','Registered checkouts in .claude/worktrees; creator identity is inferred from location.',[Path(r).name+'  ·  '+str(len(claude[r]))+' Claude worktrees' for r in roots],roots)
-   if choice is not None:tree_browser(screen,roots[choice],claude[roots[choice]],clean)
- curses.wrapper(run)
- return 0
+def launch(areas,scan,clean,demo=False,offer_agent=False,config=None,start='storage',storage_root=None):
+ from diskpick_storage_ui import run_app
+ return curses.wrapper(lambda win:run_app(Screen(win),areas,scan,clean,demo,offer_agent,config,start,storage_root))

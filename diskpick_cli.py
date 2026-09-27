@@ -96,11 +96,19 @@ def main(argv=None):
     parser.add_argument('--json',action='store_true',help='Machine-readable output')
     parser.add_argument('--config',type=Path,help='Explicit area catalog')
     parser.add_argument('--demo',action='store_true',help='Interactive synthetic demo; never scans or deletes files')
+    parser.add_argument('--groups',action='store_true',help='Open saved cleanup groups directly')
+    parser.add_argument('--storage-root',type=Path,help='Start the read-only storage tree at this folder')
     parser.add_argument('--workbench',action='store_true',help='Storage UI only, without an agent pane')
     parser.add_argument('--agent',choices=['claude','codex'],help='Start split panes with this CLI')
     parser.add_argument('--resume',help='Reattach a retained diskpick agent workspace')
     parser.add_argument('--report-demo',action='store_true',help='Agent report demo; no disk scan or deletion')
     args=parser.parse_args(argv)
+    if (args.groups or args.storage_root) and (args.command or args.workbench or args.agent or args.resume or args.json or args.yes or args.areas):
+        parser.error('Storage and group options require the local interactive interface')
+    if (args.groups or args.storage_root) and not sys.stdin.isatty():
+        parser.error('Storage and group options require an interactive terminal')
+    if args.storage_root and (args.demo or args.groups):
+        parser.error('Choose a storage root or another start mode')
     if args.command=='frame':
         if args.demo or args.report_demo or args.agent or args.resume or args.workbench or args.json or args.yes or args.areas or args.config:parser.error('frame accepts only JSON on standard input')
         import diskpick_report
@@ -127,7 +135,7 @@ def main(argv=None):
         if args.command or args.areas or args.yes or args.json:
             parser.error('--demo is only an isolated interactive demonstration')
         import diskpick_tui
-        return diskpick_tui.launch([],scan,clean,demo=True)
+        return diskpick_tui.launch([],scan,clean,demo=True,offer_agent=True,start='groups' if args.groups else 'storage')
     if args.command=='config':
         print(json.dumps({'user_config':str(catalog.CONFIG),'template':str(Path(catalog.__file__).with_name('areas.json'))},indent=2))
         return 0
@@ -143,6 +151,10 @@ def main(argv=None):
         return 0
     if args.command is None and (args.areas or args.yes):parser.error('--areas and --yes require clean')
     if args.command is None and not args.json and sys.stdin.isatty():
+        if not args.workbench and not args.agent and not args.resume:
+            import diskpick_tui
+            result=diskpick_tui.launch(areas,scan,clean,offer_agent=True,config=args.config,start='groups' if args.groups else 'storage',storage_root=args.storage_root)
+            if result!='agent':return result
         if not args.workbench:
             import diskpick_panes
             result=diskpick_panes.launch(args.agent,args.config,args.resume)
@@ -181,4 +193,3 @@ def entry():
     except (ValueError,OSError,engine.Unsafe,subprocess.TimeoutExpired) as exc:
         print('diskpick: '+str(exc),file=sys.stderr)
         return 1
-

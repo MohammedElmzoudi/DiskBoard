@@ -10,6 +10,18 @@ import diskpick_panes as panes
 import diskpick_cli as cli
 
 class PaneTests(unittest.TestCase):
+ def test_default_opens_local_storage_home_without_agent(self):
+  import diskpick_tui
+  with patch('sys.stdin.isatty',return_value=True),patch.object(cli.catalog,'load',return_value=[]),patch.object(diskpick_tui,'launch',return_value=0) as home,patch.object(panes,'launch') as agent:
+   self.assertEqual(cli.main([]),0)
+  home.assert_called_once()
+  self.assertTrue(home.call_args.kwargs['offer_agent'])
+  agent.assert_not_called()
+ def test_agent_starts_only_after_home_selection(self):
+  import diskpick_tui
+  with patch('sys.stdin.isatty',return_value=True),patch.object(cli.catalog,'load',return_value=[]),patch.object(diskpick_tui,'launch',return_value='agent'),patch.object(panes,'launch',return_value=0) as agent:
+   self.assertEqual(cli.main([]),0)
+  agent.assert_called_once()
  def test_noninteractive_rejects_panes(self):
   with patch('sys.stdin.isatty',return_value=False):
    with self.assertRaises(SystemExit):cli.main(['--agent','claude'])

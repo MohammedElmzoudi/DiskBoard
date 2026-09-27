@@ -9,6 +9,7 @@ class ReleaseTests(unittest.TestCase):
    with zipfile.ZipFile(a) as z:
     names=z.namelist();self.assertTrue(all(n.startswith('diskpick/') for n in names))
     self.assertFalse(any('test_' in n or '.git/' in n or '.ansi' in n or 'tools.json' in n for n in names))
+    self.assertEqual(z.getinfo('diskpick/diskboard.py').external_attr >> 16 & 0o777, 0o755)
     manifest=json.loads(z.read('diskpick/MANIFEST.json'))
     for name,sha in manifest['files'].items():self.assertEqual(hashlib.sha256(z.read('diskpick/'+name)).hexdigest(),sha)
     target=root/'Folder with spaces';z.extractall(target)
@@ -36,3 +37,23 @@ class ReleaseTests(unittest.TestCase):
    other=root/'other-home';other.mkdir();outside=root/'outside';outside.mkdir();(other/'.local').symlink_to(outside)
    failure=subprocess.run(['sh',str(script)],env=dict(os.environ,HOME=str(other)),capture_output=True)
    self.assertNotEqual(failure.returncode,0);self.assertEqual(list(outside.iterdir()),[])
+
+ def test_packaged_storage_and_groups_launch_from_relocated_zip(self):
+  from capture_list import Terminal
+  with tempfile.TemporaryDirectory() as tmp:
+   root=Path(tmp).resolve();archive=root/'build.zip';release.build(archive)
+   with zipfile.ZipFile(archive) as z:z.extractall(root/'Relocated App')
+   entry=root/'Relocated App/diskpick/diskboard.py'
+   terminal=Terminal(['--demo'],entry=entry)
+   try:
+    terminal.until(b'Partial scan')
+    terminal.send(b'2');terminal.until(b'Cleanup groups')
+    terminal.send(b'1');terminal.until(b'Storage')
+   finally:terminal.close()
+
+ def test_packaged_real_cleanup_cancel_confirm_and_audit(self):
+  from capture_list import cleanup_flow
+  with tempfile.TemporaryDirectory() as tmp:
+   root=Path(tmp).resolve();archive=root/'build.zip';release.build(archive)
+   with zipfile.ZipFile(archive) as z:z.extractall(root/'Relocated App')
+   cleanup_flow(entry=root/'Relocated App/diskpick/diskboard.py')

@@ -1,19 +1,17 @@
 # DiskBoard — free disk cleanup review
 
-Formerly diskpick. Use the copyable commands below, then run `diskboard`. [Update checks and automatic Git updates](UPDATES.md).
+Formerly diskpick. Use the commands below, then run `diskboard`. [Update checks and automatic Git updates](UPDATES.md).
 
-# diskpick
+**See what is taking space. Keep cleanup in one place.**
 
-**Pick disposable caches. Keep the important.**
-
-A macOS terminal app that turns a Claude or Codex disk report into a grouped storage browser. Read the explanation for each path. Select items for a local safety check. Review the exact paths before removal.
+A macOS terminal app with a fast storage tree and saved cleanup groups. Start with a bounded overview, zoom into large folders, then use your saved groups to review eligible cleanup.
 
 ```sh
-diskpick
-# Arrow keys navigate; Space selects; Enter opens a review.
+diskboard
+# Enter zooms into a folder. + / - changes depth. 2 opens cleanup groups.
 ```
 
-![The agent disk report](report.png)
+![Storage overview — synthetic demo data](home.png)
 
 Screenshots show **real CLI output captured from a pseudo-terminal and rendered with xterm.js**, using explicitly synthetic demo data. The demo never scans or deletes personal files.
 
@@ -21,26 +19,62 @@ Screenshots show **real CLI output captured from a pseudo-terminal and rendered 
 
 Requires macOS, Python 3.9+, and the standard `ps` / `lsof` utilities. Split panes require tmux and your chosen Claude or Codex CLI. diskpick uses PATH first. If a tool is missing from PATH, it checks common install folders and the Codex/ChatGPT app bundles. The standalone workbench requires no Python packages or network access. Agent CLIs retain their own authentication and network requirements.
 
-For the default macOS shell (zsh), copy both lines together:
+For the default macOS shell (zsh), copy the complete block:
 
 ```sh
+python3 -c 'import sys; raise SystemExit("Python 3.9+ required" if sys.version_info < (3, 9) else 0)' &&
+test ! -e "$HOME/.local/share/DiskBoard" && test ! -L "$HOME/.local/share/DiskBoard" &&
+test ! -e "$HOME/.local/bin/diskboard" && test ! -L "$HOME/.local/bin/diskboard" &&
 git clone https://github.com/MohammedElmzoudi/DiskBoard.git "$HOME/.local/share/DiskBoard" &&
-mkdir -p "$HOME/.local/bin" && ln -s "$HOME/.local/share/DiskBoard/diskboard.py" "$HOME/.local/bin/diskboard" && printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "${ZDOTDIR:-$HOME}/.zshrc" && export PATH="$HOME/.local/bin:$PATH"
+mkdir -p "$HOME/.local/bin" && ln -s "$HOME/.local/share/DiskBoard/diskboard.py" "$HOME/.local/bin/diskboard" &&
+printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "${ZDOTDIR:-$HOME}/.zshrc" && export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Run `diskboard` from any folder in this terminal or a new zsh terminal. These commands clone the source, create a command link, and add `~/.local/bin` to PATH in your zsh settings. They do not run an installer or use sudo. An existing destination stops setup instead of replacing files. Keep the source folder in place. For another shell, add `~/.local/bin` to that shell's PATH.
+Then run `diskboard` from any folder. The commands check Python, clone the source, create a command link, and add `~/.local/bin` to PATH for current and new zsh terminals. No installer script or sudo. If either destination already exists, setup stops without replacing it; use `diskboard update` for an existing official installation. Keep the source folder in place.
 
-The existing `sh install.sh` option creates a launcher but does not change PATH. Internal settings and legacy commands keep their diskpick names.
+For a ZIP download, extract it and run `sh install.sh` inside its folder. That installer creates `~/.local/bin/diskboard` without editing your shell profile or overwriting a different command. Run `~/.local/bin/diskboard` if it is not on PATH. You can also run `python3 -B diskboard.py` directly. Internal settings and legacy entrypoints retain their diskpick names.
 
-## Interactive workbench
+## Storage overview
 
-Run `diskpick`, choose **Claude CLI** or **Codex CLI**, and get two live terminals. The top pane is the report browser. The bottom pane is your agent, started in the diskpick source directory. Select **Copy a new scan prompt**. Press **Shift+Down**, paste the prompt, and send it. A complete JSON report updates the top pane automatically.
+`diskboard` opens the **Storage** tree. On macOS it starts at the writable startup-data volume. **Options** can scan Home or a specific folder. `diskboard --storage-root /absolute/folder` starts at that folder directly.
+
+- **Enter / Right:** zoom into a folder. **Left:** go back up.
+- **+ / -:** change visible depth from one to six levels. This changes the drawing without restarting the scan. Click the depth rail to choose a level.
+- **M / More:** continue from where the scan paused. **P / Pause:** stop further scanning.
+- **E / Scan effort:** choose Quick (2 seconds / 20,000 entries), More (5 seconds / 60,000 entries), Detailed (15 seconds / 200,000 entries), Deep (60 seconds / 800,000 entries), or Full (no time limit).
+- **T / Track:** save a selected folder to your groups as size-only.
+- **2:** open cleanup groups. **1:** return to Storage. **Q:** quit and stop owned measurement processes.
+
+The budget stops at the first limit reached. A slow filesystem call can outlast a time slice; scanning runs in a separate process so navigation and quit remain responsive. All effort levels retain at most 50,000 folders; additional folders are skipped and the scan remains partial. If that limit is reached, choose a smaller scan root.
+
+A folder marked **≥** is a measured lower bound: unvisited contents can add more space. Percentages and bars describe shares of **found data in the current folder**, not scan completion or percentages of the whole disk. Folder sizes cannot generally be known without visiting their contents; changing display depth alone does not make a full recursive size calculation cheap.
+
+The scanner reads metadata with `os.scandir`, not file contents. It visits directories in small batches, avoids following symlinks or crossing filesystem boundaries, and marks denied or changing folders incomplete. It retains folder totals and only the five largest files per folder; other files remain aggregated. Allocated sizes account for sparse files and count hard links once per scan. APFS clones can share blocks, so adding directory totals does not necessarily equal physical disk usage.
+
+A timestamped local snapshot appears on reopening while a fresh quick scan starts. Cache files are private `.overview-*.json` files beside the list settings (or beside an explicit config). They contain paths and totals, never file contents. Corrupt or linked caches are ignored. The storage tree cannot delete files.
+
+## Cleanup groups
+
+Press **2** or run `diskboard --groups` to open **Cleanup groups**. Your configured items appear on first use. Sizes arrive in the background, so you can navigate or quit during a scan. No agent or tmux is needed.
+
+- **A / Add:** track a folder's size, or add a known cache or worktree rule.
+- **Enter:** read the selected item's full paths and cleanup status.
+- **Space:** select an item with eligible cleanup. **C / Review** shows fresh exact paths, then a separate confirmation.
+- **R / Refresh:** measure your list again. **/** filters by name or path.
+- **O / Options:** rename or remove the focused item, review Claude worktrees, or open an agent report. Removing a row keeps its files; **U** undoes the removal.
+- **Tab:** focus toolbar actions. Arrow keys move; Enter activates. Mouse clicks select rows and toolbar actions; double-click opens details.
+
+Added folders are **size-only**. Cleanup is available only through existing, narrow rules. Unavailable measurements cannot be selected. The UI uses your terminal's colors and adapts to narrow windows (minimum 58 columns × 15 rows).
+
+List edits persist in `~/.config/diskpick/list.json`. An explicit `--config ./areas.json` uses `./areas.list.json`. The list does not overwrite your area catalog or change `scan` / `clean` automation. Concurrent edits and malformed settings are refused rather than overwritten.
+
+Choose **Options → Open agent report** for the optional split workspace. Choose **Claude CLI** or **Codex CLI** to get two live terminals. The top pane is the report browser. The bottom pane is your agent, started in the diskpick source directory. Select **Copy a new scan prompt**. Press **Shift+Down**, paste the prompt, and send it. A complete JSON report updates the top pane automatically.
 
 Expand groups with Enter. Use Space to select CHECK items or a group of CHECK items. Read each path, description, restore method, and evidence. Select **Check and review selected paths** to run the local checks before removal. Agent estimates never grant deletion permission. INSPECT and KEEP paths cannot be selected.
 
 See [REPORTS.md](REPORTS.md) for the prompt, report format, limits, and safety boundary. The prompt asks for ASD-STE100 Simplified Technical English. No paid diskpick service or API key is required; your agent provider may charge for its use.
 
-**Open local cleanup tools** keeps the existing Claude worktree and cache browsers available. Choose **Workbench only** to reach these tools without starting an agent. The worktree view groups registered `.claude/worktrees` checkouts by root repository.
+**Open local cleanup tools** returns to your list from an agent report. `--workbench` opens the report browser alone, without an agent. **Options → Review Claude worktrees** groups registered `.claude/worktrees` checkouts by root repository.
 
 1. Choose a repository.
 2. Change **Unused for at least … days** (default 14).
@@ -55,7 +89,7 @@ The review uses your terminal's default foreground/background with reverse-video
 
 ![Selected-worktree review](result.png)
 
-Cache cleanup also uses arrows, Space and a path preview. Read-only inventory remains available with `diskpick scan --json`. Initial inspection can take time on large checkouts; it never treats a failed scan as empty or safe.
+Cache cleanup uses the same list, Space selection, and exact-path review. Read-only inventory remains available with `diskpick scan --json`. Initial inspection can take time on large checkouts; it never treats a failed scan as empty or safe.
 
 ## Agent workspace
 
@@ -64,7 +98,7 @@ Cache cleanup also uses arrows, Space and a path preview. Read-only inventory re
 - **Ctrl+b, then d:** detach while leaving the agent running. The terminal prints `diskpick --resume workspace-…` to reconnect.
 - **Ctrl+b, then z:** temporarily zoom the focused pane if your terminal is small.
 
-`diskpick --agent claude` or `diskpick --agent codex` skips the chooser. `diskpick --workbench` opens the top pane alone; use **Open local cleanup tools** without an agent. `scan`, `clean`, and JSON automation commands never start an agent.
+`diskboard --agent claude` or `diskboard --agent codex` skips the home screen and agent chooser. `diskboard --workbench` opens the report browser alone. `scan`, `clean`, and JSON automation commands never start an agent.
 
 The agent gets no automatic prompt and no extra privileges, model override, API proxy, or approval-bypass flags. The scan prompt asks for read-only work. You can separately ask the agent to edit this repository. This uses a dedicated tmux server (`diskpick-workbench`); your other tmux sessions and keybindings are not changed. Closing the top pane does not terminate the bottom agent. Exit the agent explicitly when you want it stopped; detach is not termination. A crashed/exited pane stays visible for inspection.
 
@@ -85,7 +119,9 @@ The screenshot shows actual tmux terminals and a **labelled demo stand-in** in t
 
 Rust paths are **not guessed**. Configure your project's `target/debug` first. Download-cache presets and registered worktrees are discovered automatically. Full checkout retirement is deliberately stricter than Git: even ignored files block it. The journal records the branch and recovery ref; restore using `git worktree add <path> <branch>`. Ads, videos, checkpoints, databases, backups, personal Downloads, Trash, Docker storage, OS caches, swap and updater staging are monitoring-only or excluded.
 
-## Add or remove areas
+## Advanced area configuration
+
+Use **Add** and **Options → Remove from list** for everyday list changes. The declarative catalog below configures the rules available to agents and the known-item picker.
 
 `diskpick config` prints the user configuration and shipped template paths. Copy the template to `~/.config/diskpick/areas.json` and edit the `areas` array. The user catalog replaces the shipped entries. Discovery adds built-in download caches, storage monitors and registered-worktree options. Add `"disabled": ["npm-downloads", "area-id"]` at the top level to hide any discovered area, or `"discovery": false` to use only your catalog. No restart or rebuild is needed.
 
@@ -148,11 +184,12 @@ Rust retention follows its [documented finalized-session and locking protocol](h
 python3 -B -m unittest discover -v
 diskpick --demo
 python3 capture_pty.py
+python3 capture_storage.py
 ```
 
-Tests use disposable temporary fixtures, including real deletion, symlink rejection, active/locked/changed-file guards, hard links, audit failure, selection parsing and configuration rejection. Screenshot rendering is optional development tooling requiring `playwright` and `@xterm/xterm`; `render_capture.cjs` turns the captured ANSI streams into PNGs. These are not runtime dependencies.
+Tests use disposable temporary fixtures, including real deletion, symlink rejection, active/locked/changed-file guards, hard links, audit failure, selection parsing and configuration rejection. Screenshot rendering is optional development tooling requiring `playwright` and `@xterm/xterm`; `render_list.cjs` renders the saved-list PTY captures in `evidence/list-ui/`. `render_capture.cjs` renders the other terminal flows. These are not runtime dependencies.
 
-No background job, telemetry, automatic updater, or unattended cleanup is installed.
+No background service, telemetry, or unattended cleanup is installed. Official clean Git installations check for updates on startup; see [UPDATES.md](UPDATES.md).
 
 MIT licensed.
 

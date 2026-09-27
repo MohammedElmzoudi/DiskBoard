@@ -21,9 +21,25 @@ You can also open `Start DiskBoard.command` from Finder when macOS permits it. D
 
 For the short `diskboard` command, run `sh install.sh`. The installer creates one launcher in `~/.local/bin`. It does not edit PATH or replace a different existing launcher. If that folder is not on PATH, run `~/.local/bin/diskboard` directly. Keep this downloaded folder in its chosen location.
 
-## Make a report
+## Find what is taking space
 
-1. Choose Claude or Codex. If DiskBoard finds an installed CLI outside PATH, choose Yes to save its location or Use once.
+Run `diskboard` for a quick storage tree. **Enter** zooms into a folder, **Left** goes up, and **+ / -** changes visible depth. **M** continues scanning; **E** changes the effort budget; **P** pauses.
+
+Quick mode inspects at most 20,000 entries or two seconds of scanning. **≥** means only part of that folder has been measured. Percentages describe found data, not the whole disk. Higher effort finds more data; Full still has a 50,000-folder memory limit. Use **Options** to scan a smaller folder when needed.
+
+**T** tracks a selected folder as size-only. **2** opens cleanup groups. **1** returns to the tree. The tree itself never removes files.
+
+## Use your cleanup groups
+
+Press **2**, or run `diskboard --groups`. Press **A** to add a folder or known cache. **Enter** shows details. Your list is saved when you add, rename or remove an item.
+
+Folders you add are size-only. Use **Space** to select an eligible cache, then **C** to review exact paths before confirming removal. **Options → Remove from list** only removes the row; its files stay in place. **U** restores the row.
+
+Press **R** to refresh, **/** to filter, or **Q** to quit. Agent reports and Claude worktree review are under **Options**.
+
+## Make an optional agent report
+
+1. Open **Options → Open agent report** and choose Claude or Codex. If DiskBoard finds an installed CLI outside PATH, choose Yes to save its location or Use once.
 2. Select Copy a new scan prompt.
 3. Press Shift+Down. Paste and send the prompt in the agent pane.
 4. Wait for the report. Expand groups with Enter. Use Space to select CHECK items.

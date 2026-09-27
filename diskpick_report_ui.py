@@ -183,4 +183,4 @@ def launch(areas,scan,clean,demo=False,config=None):
         result=curses.wrapper(run)
         if result!='local':return 0
         import diskpick_tui
-        diskpick_tui.launch(areas,scan,clean)
+        diskpick_tui.launch(areas,scan,clean,config=config)
