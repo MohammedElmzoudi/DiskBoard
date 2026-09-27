@@ -7,3 +7,6 @@ build/
 .DS_Store
 *.jsonl
 local-areas.json
+
+# Local PTY captures; the reviewed demo image is home.png.
+evidence/

@@ -8,8 +8,8 @@ from diskpick_version import VERSION
 ROOT=Path(__file__).resolve().parent
 FILES=['diskboard.py','diskboard_update.py','Start DiskBoard.command','UPDATES.md','diskpick.py','diskpick_cli.py','diskpick_catalog.py','diskpick_discovery.py','diskpick_engine.py',
        'diskpick_panes.py','diskpick_report.py','diskpick_report_ui.py','diskpick_setup.py','diskpick_tui.py',
-       'diskpick_ui.py','diskpick_worktrees.py','diskpick_version.py','areas.json','install.sh','Start diskpick.command',
-       'report.png','result.png','panes.png','START-HERE.md','README.md','REPORTS.md','EXTENDING.md','LICENSE','AGENTS.md']
+       'diskpick_ui.py','diskpick_list.py','diskpick_list_ui.py','diskpick_tree.py','diskpick_storage_ui.py','home.png','diskpick_worktrees.py','diskpick_version.py','areas.json','install.sh','Start diskpick.command',
+       'report.png','result.png','panes.png','START-HERE.md','README.md','REPORTS.md','EXTENDING.md','LICENSE','AGENTS.md','CHANGELOG.md']
 
 def build(destination,root=ROOT):
     destination=Path(destination)
@@ -26,7 +26,7 @@ def build(destination,root=ROOT):
         with zipfile.ZipFile(stream,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as archive:
             for name,data in sorted(members.items()):
                 info=zipfile.ZipInfo('diskpick/'+name,date_time=(2026,1,1,0,0,0));info.compress_type=zipfile.ZIP_DEFLATED
-                info.create_system=3;info.external_attr=(0o100755 if name.endswith(('.sh','.command')) else 0o100644)<<16
+                info.create_system=3;info.external_attr=(0o100755 if (name == 'diskboard.py' or name.endswith(('.sh','.command'))) else 0o100644)<<16
                 archive.writestr(info,data)
     return hashlib.sha256(destination.read_bytes()).hexdigest()
 

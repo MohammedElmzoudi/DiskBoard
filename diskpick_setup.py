@@ -88,9 +88,9 @@ def candidates(name):
 
 
 @contextlib.contextmanager
-def settings_directory():
+def settings_directory(target=None):
     """Create only missing directories below home via non-following descriptors."""
-    target=CONFIG.parent
+    target=Path(target) if target is not None else CONFIG.parent
     home=Path.home()
     try:parts=target.relative_to(home).parts;base=home
     except ValueError:
