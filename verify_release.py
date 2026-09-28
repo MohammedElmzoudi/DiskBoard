@@ -17,7 +17,7 @@ def verify():
                    PYTHONDONTWRITEBYTECODE='1')
         for key in ('XDG_CONFIG_HOME', 'XDG_STATE_HOME', 'ZDOTDIR', 'PYTHONPATH'):
             env.pop(key, None)
-        for args in (['-m', 'unittest', 'discover', '-v'], ['capture_pty.py']):
+        for args in (['-m', 'unittest', 'discover', '-v'], ['capture_pty.py'], ['capture_list.py'], ['capture_groups.py'], ['capture_storage.py']):
             subprocess.run([sys.executable, '-B', *args], cwd=ROOT, env=env, check=True)
     print('Release acceptance passed. All tests used a disposable HOME and temporary fixtures.')
 

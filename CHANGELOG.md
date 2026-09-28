@@ -1,3 +1,13 @@
+# DiskBoard 0.2.0
+
+- Start on Cleanup groups. Save multiple folders with an editable 10-day age filter and subfolder setting.
+- Review exact matching files, cancel safely, then explicitly confirm batch deletion. Changed, linked, active and uninspected files are kept; group folders remain.
+- Track opens group configuration and then shows the saved group. File rows explain why a folder must be selected.
+- Storage shows partial sizes as “so far”, labels visible levels separately from scan effort, and offers a focused folder scan.
+- Include sourced terminal UX rules and concrete acceptance criteria in TERMINAL-UX.md.
+
+Age rules use modification time, not last use. Cleanup remains macOS-only and requires review. The source ZIP requires Python 3.9+ and is unsigned.
+
 # DiskBoard 0.1.0
 
 - Open directly to a bounded, read-only storage tree. Zoom into folders, change visible depth, pause, and continue with a larger scan budget.

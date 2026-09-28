@@ -4,14 +4,14 @@ Formerly diskpick. Use the commands below, then run `diskboard`. [Update checks 
 
 **See what is taking space. Keep cleanup in one place.**
 
-A macOS terminal app with a fast storage tree and saved cleanup groups. Start with a bounded overview, zoom into large folders, then use your saved groups to review eligible cleanup.
+A macOS terminal app with a fast storage tree and saved cleanup groups. Start with cleanup groups: choose folders, set an age filter, and review matching files before batch deletion. Use Storage to explore large folders with a bounded scan.
 
 ```sh
 diskboard
-# Enter zooms into a folder. + / - changes depth. 2 opens cleanup groups.
+# A adds a cleanup group. C reviews its files. 1 opens Storage.
 ```
 
-![Storage overview — synthetic demo data](home.png)
+![Cleanup groups — synthetic demo data](home.png)
 
 Screenshots show **real CLI output captured from a pseudo-terminal and rendered with xterm.js**, using explicitly synthetic demo data. The demo never scans or deletes personal files.
 
@@ -19,7 +19,7 @@ Screenshots show **real CLI output captured from a pseudo-terminal and rendered 
 
 Requires macOS, Python 3.9+, and the standard `ps` / `lsof` utilities. Split panes require tmux and your chosen Claude or Codex CLI. diskpick uses PATH first. If a tool is missing from PATH, it checks common install folders and the Codex/ChatGPT app bundles. The standalone workbench requires no Python packages or network access. Agent CLIs retain their own authentication and network requirements.
 
-For the macOS ZIP download, unzip it, open the **DiskBoard** folder, then double-click **Install DiskBoard.command**. Finder shows just that installer; the source files are in a hidden `.diskboard` folder. The installer verifies the included files, copies them to `~/.local/share/DiskBoard-installations/0.1.1`, creates `~/.local/bin/diskboard`, and adds that directory to your zsh or bash startup files. Open a **new Terminal window** and type `diskboard`. No sudo or cleanup scan runs during installation. Existing different commands and changed installation files are preserved. Python 3.9 or later is required; if it is missing, the installer explains what to install. macOS can also block an unsigned `.command` file downloaded from the internet; the installer does not bypass Gatekeeper. Internal settings and legacy entrypoints retain their diskpick names.
+For the macOS ZIP download, unzip it, open the **DiskBoard** folder, then double-click **Install DiskBoard.command**. Finder shows just that installer; the source files are in a hidden `.diskboard` folder. The installer verifies the included files, copies them to `~/.local/share/DiskBoard-installations/0.2.0`, creates `~/.local/bin/diskboard`, and adds that directory to your zsh or bash startup files. Open a **new Terminal window** and type `diskboard`. No sudo or cleanup scan runs during installation. Existing different commands and changed installation files are preserved. Python 3.9 or later is required; if it is missing, the installer explains what to install. macOS can also block an unsigned `.command` file downloaded from the internet; the installer does not bypass Gatekeeper. Internal settings and legacy entrypoints retain their diskpick names.
 
 For an automatic-update Git installation in the default macOS shell (zsh), copy the complete block:
 
@@ -38,18 +38,18 @@ Then run `diskboard` from any folder. The commands check Python, clone the sourc
 
 ## Storage overview
 
-`diskboard` opens the **Storage** tree. On macOS it starts at the writable startup-data volume. **Options** can scan Home or a specific folder. `diskboard --storage-root /absolute/folder` starts at that folder directly.
+Press **1** from Cleanup groups to open the **Storage** tree. On macOS it starts at the writable startup-data volume. **Options** can scan Home or a specific folder. `diskboard --storage-root /absolute/folder` starts at that folder directly.
 
 - **Enter / Right:** zoom into a folder. **Left:** go back up.
-- **+ / -:** change visible depth from one to six levels. This changes the drawing without restarting the scan. Click the depth rail to choose a level.
+- **+ / -:** change **Visible levels** from one to six. This changes the drawing without restarting the scan. This control changes the view, not the scan effort.
 - **M / More:** continue from where the scan paused. **P / Pause:** stop further scanning.
 - **E / Scan effort:** choose Quick (2 seconds / 20,000 entries), More (5 seconds / 60,000 entries), Detailed (15 seconds / 200,000 entries), Deep (60 seconds / 800,000 entries), or Full (no time limit).
-- **T / Track:** save a selected folder to your groups as size-only.
+- **T / Add to group:** configure an age-based group for the selected folder. Saving opens Cleanup groups. Existing tracked folders open their editor. **F / Scan folder:** start a focused scan of the selected folder.
 - **2:** open cleanup groups. **1:** return to Storage. **Q:** quit and stop owned measurement processes.
 
 The budget stops at the first limit reached. A slow filesystem call can outlast a time slice; scanning runs in a separate process so navigation and quit remain responsive. All effort levels retain at most 50,000 folders; additional folders are skipped and the scan remains partial. If that limit is reached, choose a smaller scan root.
 
-A folder marked **≥** is a measured lower bound: unvisited contents can add more space. Percentages and bars describe shares of **found data in the current folder**, not scan completion or percentages of the whole disk. Folder sizes cannot generally be known without visiting their contents; changing display depth alone does not make a full recursive size calculation cheap.
+A folder marked **so far** is a measured lower bound: unvisited contents can add more space. Percentages and bars describe shares of **found data in the current folder**, not scan completion or percentages of the whole disk. Folder sizes cannot generally be known without visiting their contents; changing display depth alone does not make a full recursive size calculation cheap.
 
 The scanner reads metadata with `os.scandir`, not file contents. It visits directories in small batches, avoids following symlinks or crossing filesystem boundaries, and marks denied or changing folders incomplete. It retains folder totals and only the five largest files per folder; other files remain aggregated. Allocated sizes account for sparse files and count hard links once per scan. APFS clones can share blocks, so adding directory totals does not necessarily equal physical disk usage.
 
@@ -57,16 +57,20 @@ A timestamped local snapshot appears on reopening while a fresh quick scan start
 
 ## Cleanup groups
 
-Press **2** or run `diskboard --groups` to open **Cleanup groups**. Your configured items appear on first use. Sizes arrive in the background, so you can navigate or quit during a scan. No agent or tmux is needed.
+`diskboard` opens **Cleanup groups**. Press **2** to return from Storage. Your configured items appear on first use. Sizes arrive in the background, so you can navigate or quit during a scan. No agent or tmux is needed.
 
-- **A / Add:** track a folder's size, or add a known cache or worktree rule.
-- **Enter:** read the selected item's full paths and cleanup status.
-- **Space:** select an item with eligible cleanup. **C / Review** shows fresh exact paths, then a separate confirmation.
+- **A / Add:** create a cleanup group, add a known rule, or add a size-only monitor. A cleanup group saves multiple folders, an age filter (10 days by default), and whether subfolders are included.
+- **Enter:** open a group to review deletion, edit its folders and age filter, or read details.
+- **C / Review:** review the focused group immediately. **Space** selects several eligible groups for a batch review. A separate confirmation is required before permanent deletion.
 - **R / Refresh:** measure your list again. **/** filters by name or path.
 - **O / Options:** rename or remove the focused item, review Claude worktrees, or open an agent report. Removing a row keeps its files; **U** undoes the removal.
 - **Tab:** focus toolbar actions. Arrow keys move; Enter activates. Mouse clicks select rows and toolbar actions; double-click opens details.
 
-Added folders are **size-only**. Cleanup is available only through existing, narrow rules. Unavailable measurements cannot be selected. The UI uses your terminal's colors and adapts to narrow windows (minimum 58 columns × 15 rows).
+Age rules match regular files whose **modification time** is more than the selected number of days ago; age does not prove disuse. Each file is checked separately. Folder timestamps never authorize deleting their contents. Group folders are retained. Existing size-only monitors remain read-only until you explicitly edit their cleanup rule. Age-based deletion requires the interactive exact-file preview; it is not enabled by `clean --yes`.
+
+Age-rule inspection is limited to 100,000 entries or 10 seconds per group. Incomplete folders are kept; select smaller folders if a limit is reached. Links, foreign-owned files, other filesystems, Git checkouts and metadata, app bundles and Photos libraries are excluded. System roots and your entire Home folder cannot be cleanup roots. Files changed after preview and folders with active processes or uncertain activity checks are kept. A filesystem can still change between checks; this is not an atomic transaction or a backup.
+
+Known cache/worktree rules retain their existing protections. Unavailable measurements cannot be selected. The UI uses your terminal's colors and adapts to narrow windows (minimum 58 columns × 15 rows).
 
 List edits persist in `~/.config/diskpick/list.json`. An explicit `--config ./areas.json` uses `./areas.list.json`. The list does not overwrite your area catalog or change `scan` / `clean` automation. Concurrent edits and malformed settings are refused rather than overwritten.
 
@@ -117,9 +121,10 @@ The screenshot shows actual tmux terminals and a **labelled demo stand-in** in t
 | Package downloads | Old npm, Bun, pip, Yarn and Homebrew download copies; minimum 7 days, owner idle | Installed dependencies, configuration and recent downloads |
 | Generated worktree caches | Git-ignored `main/site/static/js` and `node_modules/.cache`; checkout and cache older than 7 days, idle | Source, dependencies, recent or active work |
 | Retire linked checkout | Older than 7 days, idle, clean, named branch, no ignored or untracked files; interactive confirmation only | Base main worktrees, branch, commits and an extra recovery Git reference |
+| Age-filtered folder group | Reviewed regular files older than the saved modification-age threshold in explicitly chosen folders | Recent, changed, linked, active or uninspected files; Git checkouts; group folders |
 | Inspect | Nothing; size/status only | Everything |
 
-Rust paths are **not guessed**. Configure your project's `target/debug` first. Download-cache presets and registered worktrees are discovered automatically. Full checkout retirement is deliberately stricter than Git: even ignored files block it. The journal records the branch and recovery ref; restore using `git worktree add <path> <branch>`. Ads, videos, checkpoints, databases, backups, personal Downloads, Trash, Docker storage, OS caches, swap and updater staging are monitoring-only or excluded.
+Rust paths are **not guessed**. Configure your project's `target/debug` first. Download-cache presets and registered worktrees are discovered automatically. Full checkout retirement is deliberately stricter than Git: even ignored files block it. The journal records the branch and recovery ref; restore using `git worktree add <path> <branch>`. Built-in discovery does not grant deletion permission for personal files. Age-filtered groups require explicit folder configuration and exact-file confirmation; avoid putting valuable documents or backups in cleanup groups.
 
 ## Advanced area configuration
 
@@ -181,6 +186,10 @@ The 40 GiB reserve is an **informational goal**, not reserved disk blocks or a q
 Rust retention follows its [documented finalized-session and locking protocol](https://doc.rust-lang.org/nightly/nightly-rustc/rustc_incremental/persist/fs/index.html). Broader build-object and ad-evidence retirement need separate explicit policies and are intentionally not generalized from one-off cleanup scripts.
 
 ## Development
+
+Read [Terminal UX rules](TERMINAL-UX.md) before changing the interface. It links
+to guidance from the Docker Compose co-creators, GitHub CLI, and fzf, and defines
+DiskBoard's cleanup, feedback, scanning, and release acceptance requirements.
 
 ```sh
 python3 -B -m unittest discover -v

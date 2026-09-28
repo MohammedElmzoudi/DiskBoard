@@ -135,7 +135,7 @@ def main(argv=None):
         if args.command or args.areas or args.yes or args.json:
             parser.error('--demo is only an isolated interactive demonstration')
         import diskpick_tui
-        return diskpick_tui.launch([],scan,clean,demo=True,offer_agent=True,start='groups' if args.groups else 'storage')
+        return diskpick_tui.launch([],scan,clean,demo=True,offer_agent=True,start='storage' if args.storage_root else 'groups')
     if args.command=='config':
         print(json.dumps({'user_config':str(catalog.CONFIG),'template':str(Path(catalog.__file__).with_name('areas.json'))},indent=2))
         return 0
@@ -153,7 +153,7 @@ def main(argv=None):
     if args.command is None and not args.json and sys.stdin.isatty():
         if not args.workbench and not args.agent and not args.resume:
             import diskpick_tui
-            result=diskpick_tui.launch(areas,scan,clean,offer_agent=True,config=args.config,start='groups' if args.groups else 'storage',storage_root=args.storage_root)
+            result=diskpick_tui.launch(areas,scan,clean,offer_agent=True,config=args.config,start='storage' if args.storage_root else 'groups',storage_root=args.storage_root)
             if result!='agent':return result
         if not args.workbench:
             import diskpick_panes

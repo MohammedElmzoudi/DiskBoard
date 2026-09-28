@@ -195,6 +195,6 @@ def cache_browser(screen,areas,scan,clean):
    if choice==1:
     result=screen.wait('Cleaning reviewed caches',lambda:clean(chosen,paths),mutating=True);screen.message('Complete','Net disk change '+ui.amount(result['net_change_bytes']));return
 
-def launch(areas,scan,clean,demo=False,offer_agent=False,config=None,start='storage',storage_root=None):
+def launch(areas,scan,clean,demo=False,offer_agent=False,config=None,start='groups',storage_root=None):
  from diskpick_storage_ui import run_app
  return curses.wrapper(lambda win:run_app(Screen(win),areas,scan,clean,demo,offer_agent,config,start,storage_root))

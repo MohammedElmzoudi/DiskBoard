@@ -85,7 +85,7 @@ def demo_capture():
     terminal = Terminal(['--demo', '--groups'], cols=60, rows=20)
     try:
         terminal.until(b'Studio'); terminal.read(); terminal.capture('narrow')
-        terminal.send(b'\r'); terminal.until(b'On disk'); terminal.capture('details-narrow')
+        terminal.send(b'\r\x1bOB\x1bOB\r'); terminal.until(b'On disk'); terminal.capture('details-narrow')
         terminal.send(b'\x1b')
     finally:terminal.close()
 
@@ -100,8 +100,8 @@ def persistence_flow():
         args = ['--groups', '--config', str(config)]
         terminal = Terminal(args)
         try:
-            terminal.until(b'Your list is empty')
-            terminal.send(b'a\r'); terminal.until(b'Folder path')
+            terminal.until(b'No cleanup groups yet')
+            terminal.send(b'a\x1bOB\x1bOB\r'); terminal.until(b'Folder path')
             terminal.send(str(folder).encode() + b'\r')
             terminal.until(b'Added to your list')
             terminal.send(b'o\r'); terminal.until(b'Rename item')
@@ -116,10 +116,10 @@ def persistence_flow():
             terminal.until(b'My project files')
             terminal.send(b'o\x1bOB\r'); terminal.until(b'Files kept')
             terminal.send(b'u'); terminal.until(b'Item restored')
-            terminal.send(b'a\r'); terminal.send(str(root / 'missing').encode() + b'\r')
+            terminal.send(b'a\x1bOB\x1bOB\r'); terminal.send(str(root / 'missing').encode() + b'\r')
             terminal.until(b'Could not finish')
             terminal.send(b'\x1b')
-            terminal.send(b'a\r'); terminal.send(b'/cancel-this\x1b')
+            terminal.send(b'a\x1bOB\x1bOB\r'); terminal.send(b'/cancel-this\x1b')
         finally:terminal.close()
         data = json.loads(config.with_suffix('.list.json').read_text())
         assert [a['title'] for a in data['areas']] == ['My project files'], data
@@ -129,10 +129,10 @@ def persistence_flow():
         # The user can intentionally keep an empty list across restarts.
         terminal = Terminal(args)
         try:
-            terminal.send(b'o\x1bOB\r'); terminal.until(b'Your list is empty')
+            terminal.send(b'o\x1bOB\r'); terminal.until(b'No cleanup groups yet')
         finally:terminal.close()
         terminal = Terminal(args)
-        try:terminal.until(b'Your list is empty')
+        try:terminal.until(b'No cleanup groups yet')
         finally:terminal.close()
 
 

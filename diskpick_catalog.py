@@ -24,7 +24,7 @@ def validate(data):
     for area in data['areas']:
         if not isinstance(area, dict):
             raise ValueError('Each area must be an object')
-        if set(area) - {'id','title','kind','roots','cache','description','min_idle_days'}:
+        if set(area) - {'id','title','kind','roots','cache','description','min_idle_days','older_than_days','recursive'}:
             raise ValueError('Unknown area field; executable commands are not supported')
         if 'min_idle_days' in area and (area.get('kind')!='worktree' or type(area['min_idle_days']) is not int or not 0<=area['min_idle_days']<=36500):raise ValueError('Invalid idle-day threshold')
         key = area.get('id', '')
@@ -35,12 +35,17 @@ def validate(data):
             value = area.get(field, '')
             if not isinstance(value, str) or not value or len(value)>180 or not value.isprintable():
                 raise ValueError('Area %s needs a printable %s' % (key, field))
-        if area.get('kind') not in {'rust','browser','inspect','downloads','generated','worktree'}:
+        if area.get('kind') not in {'rust','browser','inspect','downloads','generated','worktree','aged'}:
             raise ValueError('Unknown handler kind for '+key)
         if area['kind']=='downloads' and (area['id'] not in discovery.DOWNLOADS or area.get('roots')):
             raise ValueError('Download handlers use fixed built-in paths')
         if area['kind'] in {'generated','worktree'} and len(area.get('roots',[]))!=1:
             raise ValueError('Generated build areas require one checkout root')
+        if area['kind'] == 'aged':
+            if type(area.get('older_than_days')) is not int or not 1 <= area['older_than_days'] <= 36500:
+                raise ValueError('Choose an age from 1 to 36500 days')
+            if (type(area.get('recursive', True)) is not bool or not isinstance(area.get('roots'), list) or not 1 <= len(area['roots']) <= 32):
+                raise ValueError('A cleanup group needs 1 to 32 folders')
         roots = area.get('roots', [])
         if not isinstance(roots, list) or any(not isinstance(p,str) or not p.isprintable() for p in roots):
             raise ValueError('roots must be a list of paths')
@@ -99,6 +104,10 @@ def roots(area):
 
 
 def execute_handler(area, cleaner):
+    if area['kind'] == 'aged':
+        import diskpick_age
+        diskpick_age.execute(area, cleaner)
+        return
     if area['kind']=='worktree':
         discovery.retire_worktree(area,cleaner)
         return
@@ -117,6 +126,9 @@ def execute_handler(area, cleaner):
 
 
 def scan(area):
+    if area['kind'] == 'aged':
+        import diskpick_age
+        return diskpick_age.inspect(area)
     events=[]
     cleaner=engine.Cleaner(False, lambda event,**kw:events.append(dict(event=event,**kw)))
     cleaner.quiet=True

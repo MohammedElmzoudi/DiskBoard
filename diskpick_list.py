@@ -1,4 +1,4 @@
-"""Private, persistent UI list. Adding a folder grants inventory access only."""
+"""Private, persistent UI list. Cleanup rules require explicit configuration."""
 import copy
 import fcntl
 import hashlib
@@ -133,3 +133,18 @@ class SavedList:
         areas = list(self.areas)
         areas.insert(min(position, len(areas)), removed)
         self.replace(areas)
+
+
+def cleanup_area(roots, title, days=10, recursive=True, key=None):
+    import diskpick_age
+    paths = []
+    for value in roots:
+        path = diskpick_age.validate_root(folder_area(value)['roots'][0])
+        if str(path) not in paths:
+            paths.append(str(path))
+    area = dict(id=key or 'group-' + uuid.uuid4().hex[:16], title=title, kind='aged',
+                roots=paths, older_than_days=days, recursive=recursive,
+                description='Files last modified more than %d days ago. %s.' %
+                    (days, 'Includes subfolders' if recursive else 'Direct files only'))
+    catalog.validate(dict(version=1, areas=[area]))
+    return area

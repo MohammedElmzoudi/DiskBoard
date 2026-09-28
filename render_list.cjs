@@ -7,7 +7,7 @@ const root = path.join(__dirname, 'evidence/list-ui');
 (async () => {
   const browser = await chromium.launch({headless: true});
   try {
-    for (const name of ['list', 'selected', 'review', 'add', 'options', 'narrow', 'details-narrow', 'storage', 'storage-depth', 'storage-zoom', 'storage-effort', 'storage-narrow']) {
+    for (const name of ['list', 'selected', 'review', 'add', 'options', 'narrow', 'details-narrow', 'storage', 'storage-depth', 'storage-zoom', 'storage-effort', 'storage-narrow', 'age-group-editor', 'age-groups', 'age-review', 'age-result']) {
       const {cols, rows} = JSON.parse(fs.readFileSync(path.join(root, name + '.json')));
       for (const dark of (['list', 'storage'].includes(name) ? [false, true] : [false])) {
         const page = await browser.newPage({viewport: {width: Math.ceil(cols * 8.44 + 40), height: rows * 20 + 54}, deviceScaleFactor: 2});
@@ -26,7 +26,7 @@ const root = path.join(__dirname, 'evidence/list-ui');
         const label = name + (dark ? '-dark' : '');
         fs.writeFileSync(path.join(root, label + '.txt'), (await page.evaluate(() => window.lines)).join('\n'));
         await page.screenshot({path: path.join(root, label + '.png'), fullPage: true});
-        if (name === 'storage' && !dark) fs.copyFileSync(path.join(root, label + '.png'), path.join(__dirname, 'home.png'));
+        if (name === 'list' && !dark) fs.copyFileSync(path.join(root, label + '.png'), path.join(__dirname, 'home.png'));
         await page.close();
       }
     }
