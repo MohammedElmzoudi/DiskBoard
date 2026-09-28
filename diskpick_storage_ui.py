@@ -193,21 +193,21 @@ def draw(screen, snapshot, index, notice, demo, depth, effort):
         win.refresh(); return []
     scope = Path(snapshot['root']) / snapshot.get('focus', '')
     screen.line(3 if compact else 5, clip(short_path(scope), w - 4), curses.A_BOLD)
-    depth_control = 'Depth ' + '─' * (depth - 1) + '●' + '─' * (6 - depth) + ' %d  [- +]' % depth
-    effort_control = 'Scan ' + '─' * effort + '●' + '─' * (4 - effort) + ' ' + EFFORTS[effort][0] + ' [e]'
+    depth_control = 'Visible levels: %d [- +]' % depth
+    effort_control = 'Scan effort: ' + EFFORTS[effort][0] + ' [e]'
     screen.line(4 if compact else 6, depth_control + '    ' + effort_control)
-    state = 'Scanning' if snapshot.get('running') else 'Measured' if snapshot['complete'] else 'Partial scan'
+    state = 'Scanning' if snapshot.get('running') else 'Measured' if snapshot['complete'] else 'Paused — M continues'
     if snapshot.get('cached'):state = 'Last scan ' + time.strftime('%H:%M', time.localtime(snapshot['captured_at']))
     screen.line(5 if compact else 7, '%s · %s found · %s entries' % (state, ui.amount(snapshot['bytes']), format(snapshot['entries'], ',')))
     wide = w >= 90
-    size_width = 13
+    size_width = 19
     bar_width = 12 if wide else 0
     right_width = size_width + (bar_width + 2 if wide else 0) + 10
     name_width = w - 4 - right_width
     header_y = 7 if compact else 9
     first_y = header_y + 2
     footer_y = h - (5 if compact else 6)
-    screen.line(header_y, 'FOLDER / FILE'.ljust(name_width) + 'ON DISK'.rjust(size_width) + ('  ' + 'SHARE OF FOUND'.ljust(bar_width + 10) if wide else '   % FOUND'))
+    screen.line(header_y, 'FOLDER / FILE'.ljust(name_width) + 'FOUND ON DISK'.rjust(size_width) + ('  ' + 'SHARE OF FOUND'.ljust(bar_width + 10) if wide else '   % FOUND'))
     screen.line(header_y + 1, '─' * (w - 4))
     rows = snapshot['rows']
     room = max(1, footer_y - first_y)
@@ -216,7 +216,7 @@ def draw(screen, snapshot, index, notice, demo, depth, effort):
     for n, row in enumerate(rows[start:start + room], start):
         prefix = '  ' * (row['level'] - 1) + ('▸ ' if row['kind'] == 'folder' else '· ')
         name = clip(prefix + row['name'], name_width)
-        size = ('' if row['complete'] else '≥ ') + ui.amount(row['bytes'])
+        size = ui.amount(row['bytes']) + ('' if row['complete'] else ' so far')
         if not row['complete'] and row['bytes'] == 0:size = 'Not measured'
         share = row['bytes'] / snapshot['bytes'] if snapshot['bytes'] else 0
         bar = ('  ' + ('━' * round(share * bar_width)).ljust(bar_width, '·')) if wide else ''
@@ -228,14 +228,15 @@ def draw(screen, snapshot, index, notice, demo, depth, effort):
     screen.line(footer_y, '─' * (w - 4))
     if rows:
         screen.line(footer_y + 1, clip(str(Path(snapshot['root']) / rows[index]['path']), w - 4))
-    description = snapshot.get('reason') or ('≥ partial · % of found data' if compact else '≥ = measured so far. Percentages describe found data.')
+    description = snapshot.get('reason') or ('Partial sizes grow as scanning continues. % of found bytes.')
     if snapshot.get('issues'):description += ' %d checks incomplete.' % snapshot['issues']
     if snapshot.get('capped'):description = 'Folder limit reached. Options → Choose a folder to scan further.'
     if snapshot.get('omitted'):description = 'Some rows omitted. Zoom into a folder to see more.'
     screen.line(footer_y + 2, clip(notice or description, w - 4))
-    screen.line(footer_y + 3, '↑↓ Move Enter Zoom ← Up M More P Pause T Track Q Quit' if compact else '↑↓ Move  Enter Zoom  ← Up  M More  P Pause  T Track  Q Quit')
+    screen.line(footer_y + 3, 'M Continue  P Pause  T Add to group  F Scan folder  Q Quit')
     if not compact:
-        screen.line(h - 2, ('DEMO DATA · ' if demo else '') + '%d–%d of %d rows · %.1fs scanning' % (min(start+1,len(rows)), min(start+room,len(rows)), len(rows), snapshot['elapsed']))
+        screen.line(h - 2, 'Enter Open  ← Back  ↑↓ Move · ' + ('DEMO DATA · ' if demo else '') + '%d–%d of %d rows · %.1fs scanning' % (min(start+1,len(rows)), min(start+room,len(rows)), len(rows), snapshot['elapsed']))
+    if compact:screen.line(h - 1, 'Enter Open  ← Back  ↑↓ Move')
     win.refresh()
     return hits
 
@@ -256,6 +257,7 @@ def storage(screen, areas, demo=False, config=None, root=None):
             hits = draw(screen, snapshot, index, notice or (session.error if session else ''), demo, depth, effort)
             screen.win.timeout(100)
             key = screen.win.getch()
+            if ord('A') <= key <= ord('Z'):key += 32
             if key == -1:continue
             screen.win.timeout(-1)
             if key in (ord('q'), 27):return 0
@@ -272,12 +274,11 @@ def storage(screen, areas, demo=False, config=None, root=None):
                             if 17 <= x < 35:return 'groups'
                             if x >= 35:key = ord('o')
                         elif y == (4 if screen.win.getmaxyx()[0] < 26 else 6):
-                            if 8 <= x < 14:
-                                depth = x - 8 + 1
-                                if session:session.send(action='view', focus=focus, depth=depth)
-                            elif 32 <= x < 37:
-                                effort = x - 32; key = ord('m')
+                            if 21 <= x < 23:key = ord('-')
+                            elif 23 <= x < 26:key = ord('+')
                             elif x >= 29:key = ord('e')
+                        elif y == screen.win.getmaxyx()[0] - (2 if screen.win.getmaxyx()[0] < 26 else 3):
+                            key = ord('m' if x < 14 else 'p' if x < 23 else 't' if x < 39 else 'f' if x < 53 else 'q')
                         else:
                             index = next((n for row_y, n in hits if row_y == y), index)
                             if snapshot and snapshot['rows']:
@@ -297,6 +298,7 @@ def storage(screen, areas, demo=False, config=None, root=None):
                 if key in (ord('+'), ord('='), ord('-')):
                     depth = max(1, min(6, depth + (-1 if key == ord('-') else 1)))
                     if session:session.send(action='view', focus=focus, depth=depth)
+                    notice = 'Showing %d levels. This changes the view; M scans more data.' % depth
                 elif key in (10, 13, curses.KEY_ENTER, curses.KEY_RIGHT) and row:
                     if row['kind'] == 'folder':
                         focus = row['path']; index = 0; selected = None
@@ -320,17 +322,31 @@ def storage(screen, areas, demo=False, config=None, root=None):
                         if session:session.send(action='effort', effort=effort)
                         notice = 'Additional ' + EFFORTS[effort][0].lower() + ' scan requested.'
                 elif key == ord('m'):
-                    if session:session.send(action='more', effort=effort)
+                    if session:session.send(action='more', effort=max(1, effort))
                     notice = '' if session else 'Demo only. The live scan continues from its previous position.'
                 elif key == ord('p'):
                     if session:session.send(action='pause')
                     notice = 'Paused. M continues the scan.'
-                elif key == ord('t') and row and row['kind'] == 'folder':
-                    if demo:notice = 'Demo only. The live app saves this folder as a size-only group.'
+                elif key == ord('t'):
+                    if not row or row['kind'] != 'folder':
+                        notice = 'Select a folder first. Enter opens folders; arrows choose a row.'
                     else:
-                        saved = SavedList(areas, config)
-                        saved.add(folder_area(str(Path(snapshot['root']) / row['path'])))
-                        notice = 'Added to cleanup groups as size-only. Press 2 to see it.'
+                        from diskpick_list_ui import edit_group
+                        saved = SavedList(areas, config, demo)
+                        path = str(Path(snapshot['root']) / row['path'])
+                        existing = next((a for a in saved.areas if path in a.get('roots', [])), None)
+                        if edit_group(screen, saved, existing, initial_root=path, demo=demo):
+                            return 'groups'
+                        notice = 'Cancelled. No group was changed.'
+                elif key == ord('f'):
+                    if not row or row['kind'] != 'folder':
+                        notice = 'Select a folder to scan.'
+                    elif not demo:
+                        target = Path(snapshot['root']) / row['path']
+                        with engine.directory(target):pass
+                        session.close(); session = Overview(target, config)
+                        root = target; focus = ''; index = 0; selected = None
+                        notice = 'Scanning this folder on its own.'
                 elif key in (ord('o'), ord('r')):
                     choice = 3 if key == ord('r') else screen.menu('Storage options', '',
                         ['Scan Home', 'Scan startup disk data', 'Choose a folder', 'Start a fresh scan', 'How sizes work', 'Back'])
@@ -348,7 +364,7 @@ def storage(screen, areas, demo=False, config=None, root=None):
                         document(screen, 'How sizes work', [
                             'Quick scans stop after 2 seconds of scanning or 20,000 entries. More continues where the scan paused.',
                             'Depth only changes how many levels are drawn. Hidden descendants still contribute to measured folder totals.',
-                            'An unfinished folder shows a lower bound (≥), not an extrapolated estimate. A large unseen file can still change the ranking.',
+                            'An unfinished folder says so far: its measured size can still grow. A large unseen file can change the ranking.',
                             'Percentages are shares of the data found in the current folder. They are not scan completion or percentages of the entire disk.',
                             'Sizes use allocated blocks. Sparse files use less than their logical size. Hard links count once per scan; APFS clones may share blocks, so folder totals need not match physical disk usage.',
                             'Symlinks are not followed, other filesystems are not crossed, and unreadable folders stay marked incomplete.',

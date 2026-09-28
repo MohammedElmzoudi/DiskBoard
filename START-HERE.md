@@ -25,19 +25,28 @@ For the short `diskboard` command, run `sh install.sh`. The installer creates on
 
 ## Find what is taking space
 
-Run `diskboard` for a quick storage tree. **Enter** zooms into a folder, **Left** goes up, and **+ / -** changes visible depth. **M** continues scanning; **E** changes the effort budget; **P** pauses.
+Run `diskboard`, then press **1** for the storage tree. **Enter** zooms into a folder, **Left** goes up, and **+ / -** changes visible depth. **M** continues scanning; **E** changes the effort budget; **P** pauses.
 
-Quick mode inspects at most 20,000 entries or two seconds of scanning. **≥** means only part of that folder has been measured. Percentages describe found data, not the whole disk. Higher effort finds more data; Full still has a 50,000-folder memory limit. Use **Options** to scan a smaller folder when needed.
+Quick mode inspects at most 20,000 entries or two seconds of scanning. **“so far”** means only part of that folder has been measured. Percentages describe found data, not the whole disk. Higher effort finds more data; Full still has a 50,000-folder memory limit. Use **Options** to scan a smaller folder when needed.
 
-**T** tracks a selected folder as size-only. **2** opens cleanup groups. **1** returns to the tree. The tree itself never removes files.
+**T** opens cleanup-group configuration for the selected folder. **F** scans that folder separately. **2** opens cleanup groups. **1** returns to the tree. The tree itself never removes files.
 
 ## Use your cleanup groups
 
-Press **2**, or run `diskboard --groups`. Press **A** to add a folder or known cache. **Enter** shows details. Your list is saved when you add, rename or remove an item.
+`diskboard` opens your groups. Press **A → Cleanup group**, name it, add one or
+more folders, and choose **Older than: 10 days** (editable). Choose whether to
+include subfolders, then save. Saving never deletes files.
 
-Folders you add are size-only. Use **Space** to select an eligible cache, then **C** to review exact paths before confirming removal. **Options → Remove from list** only removes the row; its files stay in place. **U** restores the row.
+Press **C** to review matching files in the focused group. Read the exact list,
+continue, and explicitly confirm permanent deletion. Cancel is the default.
+Recent files stay. Files changed since preview, links, active or uncertain
+folders, Git checkouts, and app/library bundles are kept. Age means last
+modification time, not last use. Folders themselves remain.
 
-Press **R** to refresh, **/** to filter, or **Q** to quit. Agent reports and Claude worktree review are under **Options**.
+**Enter** opens the group editor or details. **Space** selects multiple eligible
+groups for a batch review. **Options → Remove from list** removes the saved row
+only; **U** restores it. **R** refreshes, **/** filters, and **Q** quits.
+Existing size-only folders stay read-only unless you explicitly configure a rule.
 
 ## Make an optional agent report
 

@@ -1,5 +1,7 @@
 # Contributor instructions
 
+- Before changing terminal UI or cleanup interactions, read [TERMINAL-UX.md](TERMINAL-UX.md). Its sourced rules and disposable-fixture acceptance flows are the UX contract; requirements are not proof of implementation.
+
 - Treat cleanup scope as a safety boundary. Do not broaden it to increase reclaimed numbers.
 - Never test destructive behavior against real user data. Use temporary disposable fixtures.
 - Keep dry-run/inventory non-destructive; make failed inspections preserve candidates.

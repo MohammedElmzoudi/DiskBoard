@@ -106,7 +106,7 @@ class ReleaseTests(unittest.TestCase):
    entry=root/'Relocated App/DiskBoard/.diskboard/diskboard.py'
    terminal=Terminal(['--demo'],entry=entry)
    try:
-    terminal.until(b'Partial scan')
+    terminal.until(b'Cleanup groups');terminal.send(b'1');terminal.until(b'Paused')
     terminal.send(b'2');terminal.until(b'Cleanup groups')
     terminal.send(b'1');terminal.until(b'Storage')
    finally:terminal.close()
@@ -117,3 +117,10 @@ class ReleaseTests(unittest.TestCase):
    root=Path(tmp).resolve();archive=root/'build.zip';release.build(archive)
    with zipfile.ZipFile(archive) as z:z.extractall(root/'Relocated App')
    cleanup_flow(entry=root/'Relocated App/DiskBoard/.diskboard/diskboard.py')
+
+ def test_packaged_age_group_cleanup(self):
+  from capture_groups import flow
+  with tempfile.TemporaryDirectory() as tmp:
+   root=Path(tmp).resolve(); archive=root/'release.zip'; release.build(archive)
+   with zipfile.ZipFile(archive) as z:z.extractall(root)
+   flow(root/'DiskBoard/.diskboard/diskboard.py')

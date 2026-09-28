@@ -9,7 +9,7 @@ from capture_list import Terminal
 def demo_capture():
     terminal = Terminal(['--demo'], cols=110, rows=34)
     try:
-        terminal.until(b'Partial scan'); terminal.capture('storage')
+        terminal.until(b'Cleanup groups'); terminal.send(b'1'); terminal.until(b'Paused'); terminal.capture('storage')
         terminal.send(b'+'); terminal.capture('storage-depth')
         terminal.send(b'\r'); terminal.capture('storage-zoom')
         terminal.send(b'e'); terminal.capture('storage-effort')
@@ -18,7 +18,7 @@ def demo_capture():
     finally:terminal.close()
     terminal = Terminal(['--demo'], cols=60, rows=20)
     try:
-        terminal.until(b'Partial scan'); terminal.capture('storage-narrow')
+        terminal.until(b'Cleanup groups'); terminal.send(b'1'); terminal.until(b'Paused'); terminal.capture('storage-narrow')
     finally:terminal.close()
 
 
@@ -32,15 +32,16 @@ def fixture_flow():
         terminal = Terminal(['--storage-root', str(root), '--config', str(config)], cols=110, rows=34)
         try:
             terminal.until(b'Project'); terminal.until(b'Measured')
-            terminal.send(b't'); terminal.until(b'Added to cleanup groups')
+            terminal.send(b't'); terminal.until(b'Files last modified'); terminal.send(b'\r'); terminal.until(b'Cleanup groups'); terminal.send(b'1'); terminal.until(b'Measured')
             terminal.send(b'\r'); terminal.until(b'large-file')
+            terminal.send(b't'); terminal.until(b'Select a folder first')
             terminal.send(b'+'); terminal.send(b'-')
             terminal.send(b'p'); terminal.until(b'Paused')
             terminal.send(b'm'); terminal.send(b'2'); terminal.until(b'Project')
             terminal.send(b'1'); terminal.until(b'Storage')
         finally:terminal.close()
         data = json.loads(config.with_suffix('.list.json').read_text())
-        assert len(data['areas']) == 1 and data['areas'][0]['kind'] == 'inspect'
+        assert len(data['areas']) == 1 and data['areas'][0]['kind'] == 'aged'
         assert data['areas'][0]['roots'] == [str(folder)]
         assert large.read_bytes() == before
         assert list(root.glob('.overview-*.json'))

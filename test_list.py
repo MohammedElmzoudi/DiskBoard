@@ -131,7 +131,7 @@ class ListReviewTests(unittest.TestCase):
             clean.assert_not_called()
 
     def test_monitor_cannot_become_removable_from_size_metadata(self):
-        row = view.demo_scan([view.demo_areas()[1]])[0]
+        row = view.demo_scan([next(a for a in view.demo_areas() if a['kind'] == 'inspect')])[0]
         row.update(eligible_bytes=1024, preview=[dict(path='/demo/do-not-delete')])
         self.assertFalse(view.removable(row))
 

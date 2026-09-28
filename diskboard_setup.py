@@ -47,7 +47,7 @@ def checked_package():
     raw = safe_file(PACKAGE / 'MANIFEST.json')
     if raw is None:raise RuntimeError('The download is incomplete. Download the ZIP again.')
     manifest = json.loads(raw)
-    if manifest.get('platform') != 'macOS' or not re.fullmatch(r'0\.1\.1', manifest.get('version', '')):
+    if manifest.get('platform') != 'macOS' or not re.fullmatch(r'0\.2\.0', manifest.get('version', '')):
         raise RuntimeError('The download version does not match its installer.')
     files = manifest.get('files')
     if not isinstance(files, dict) or len(files) < 20 or 'diskboard.py' not in files:
@@ -158,7 +158,7 @@ def install():
     safe_directory(home)
     raw, files = checked_package()
     local = home / '.local';share = local / 'share';releases = share / 'DiskBoard-installations'
-    bin_dir = local / 'bin';target = releases / '0.1.1';launcher = bin_dir / 'diskboard'
+    bin_dir = local / 'bin';target = releases / '0.2.0';launcher = bin_dir / 'diskboard'
     for folder in (local, share, releases, bin_dir):
         if folder.exists() or folder.is_symlink():safe_directory(folder)
     profiles = shell_profiles(home)

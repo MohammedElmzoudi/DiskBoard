@@ -14,7 +14,7 @@ from pathlib import Path
 import diskpick_catalog as catalog
 import diskpick_engine as engine
 import diskpick_ui as ui
-from diskpick_list import SavedList, folder_area
+from diskpick_list import SavedList, folder_area, cleanup_area
 
 
 def clip(value, width):
@@ -30,7 +30,7 @@ def short_path(value):
 
 def removable(row):
     return bool(row and row['area']['kind'] != 'inspect' and row['total_bytes'] is not None
-                and row.get('eligible_bytes') and row.get('preview'))
+                and row.get('preview'))
 
 
 def state_label(row):
@@ -41,6 +41,9 @@ def state_label(row):
     if row['area']['kind'] == 'inspect':
         return 'Size only'
     if removable(row):
+        if row['area']['kind'] == 'aged':
+            count = len(row['preview'])
+            return '%d %s · %s' % (count, 'file' if count == 1 else 'files', ui.amount(row['eligible_bytes']))
         return ui.amount(row['eligible_bytes']) + ' to review'
     if row.get('status') == 'SETUP':
         return 'Needs a path'
@@ -196,6 +199,13 @@ def document(screen, title, paragraphs, action=None):
             screen.line(h - 2, '↑ ↓  Scroll    %d–%d of %d lines' % (offset + 1, min(offset + room, len(lines)), len(lines)))
         win.refresh()
         key = win.getch()
+        if key == curses.KEY_MOUSE:
+            try:
+                _, x, y, _, state = curses.getmouse()
+                if state & (curses.BUTTON1_CLICKED | curses.BUTTON1_PRESSED) and y == h - 3:
+                    if action and x < len(action) + 7:return True
+                    return False
+            except curses.error:pass
         if key in (27, ord('q')):
             return False
         if action and key in (ord('r'), ord('R')):
@@ -231,18 +241,18 @@ def review_selected(screen, chosen, scan, clean, demo=False):
     else:
         fresh = screen.wait('Checking selected items', lambda: scan(chosen, True))
     ready = [row for row in fresh if removable(row)]
-    paths = {p['path'] for row in ready for p in row.get('preview', [])}
+    paths = {p['path']: p for row in ready for p in row.get('preview', [])}
     if not paths:
         document(screen, 'Nothing to remove', ['The selected items have no eligible paths.', ''] +
                  [reason for row in fresh for reason in row.get('reasons', [])])
         return False
-    paragraphs = ['Only these paths will be removed. Caches may rebuild on next use.']
+    paragraphs = ['Delete only the reviewed files below. This is permanent; DiskBoard does not move files to Trash.']
     if any(row['area']['kind'] == 'worktree' for row in ready):
         paragraphs.append('Worktree removal keeps the Git branch, commits and recovery reference.')
     paragraphs.append('')
     for row in fresh:
-        paragraphs += [row['area']['title'] + ' · ' + state_label(row)]
-        paragraphs += [p['path'] for p in row.get('preview', [])] if removable(row) else row.get('reasons', [])
+        paragraphs += [row['area']['title'] + ' · ' + state_label(row), row['area']['description']]
+        paragraphs += [p['path'] + ' · ' + ui.amount(p.get('allocated_bytes', 0)) for p in row.get('preview', [])] if removable(row) else row.get('reasons', [])
         paragraphs.append('')
     paragraphs += ['Sizes can overlap and do not predict physical space recovered.']
     if not document(screen, 'Review exact paths', paragraphs, 'Continue to confirmation'):
@@ -253,8 +263,9 @@ def review_selected(screen, chosen, scan, clean, demo=False):
     if demo:
         document(screen, 'Demo complete', ['The review is complete. No real files were scanned or removed.'])
         return False
+    approval = paths if any(r['area']['kind'] == 'aged' for r in ready) else set(paths)
     result = screen.wait('Removing reviewed files',
-                         lambda: clean([r['area'] for r in ready], paths), mutating=True)
+                         lambda: clean([r['area'] for r in ready], approval), mutating=True)
     completed = sum(item.get('completed', 0) for item in result['results'])
     reasons = [reason for item in result['results'] for reason in item.get('reasons', [])]
     document(screen, 'Review complete', ['%d cleanup operations completed.' % completed,
@@ -264,7 +275,7 @@ def review_selected(screen, chosen, scan, clean, demo=False):
 
 
 def demo_areas():
-    return [dict(id=key, title=title, kind=kind, roots=[path], description=description)
+    return [dict(id='downloads-demo', title='Downloads and exports', kind='aged', roots=['/demo/Downloads', '/demo/Exports'], older_than_days=10, recursive=True, description='Files last modified more than 10 days ago. Includes subfolders.')] + [dict(id=key, title=title, kind=kind, roots=[path], description=description)
             for key, title, kind, path, description in [
                 ('compiler', 'Studio · compiler cache', 'rust', '/demo/Studio/target/debug', 'Older compiler sessions. The newest session and active builds stay.'),
                 ('exports', 'Video exports', 'inspect', '/demo/Studio/exports', 'Final videos and review captures. Size only; files stay in place.'),
@@ -274,7 +285,7 @@ def demo_areas():
 
 
 def demo_scan(areas, quiet=True):
-    values = {'compiler': (4.6, 1.8), 'exports': (12.4, 0), 'projects': (8.2, 0),
+    values = {'downloads-demo': (16.8, 9.2), 'compiler': (4.6, 1.8), 'exports': (12.4, 0), 'projects': (8.2, 0),
               'worktree': (2.1, 0), 'archives': (6.8, 0)}
     rows = []
     for area in areas:
@@ -284,14 +295,63 @@ def demo_scan(areas, quiet=True):
                          status='READY' if eligible else 'KEPT', candidates=int(bool(eligible)),
                          paths=[dict(path=path, bytes=int(total * engine.GIB))],
                          reasons=['Active process holds this checkout open.'] if area['id'] == 'worktree' else [],
-                         preview=[dict(path=path + '/incremental/old-session', allocated_bytes=int(eligible * engine.GIB))] if eligible else []))
+                         preview=[dict(path=path + ('/old-export.zip' if area['kind'] == 'aged' else '/incremental/old-session'), allocated_bytes=int(eligible * engine.GIB))] if eligible else []))
     return rows
 
 
+def edit_group(screen, saved, area=None, initial_root=None, demo=False):
+    roots = list(area.get('roots', [])) if area else ([initial_root] if initial_root else [])
+    name = area['title'] if area else (Path(initial_root).name if initial_root else '')
+    if not name:
+        name = edit_text(screen, 'New cleanup group', 'Group name', hint='Example: Downloads and exports')
+        if not name:return None
+    days = area.get('older_than_days', 10) if area else 10
+    recursive = area.get('recursive', True) if area else True
+    while True:
+        labels = ['Save group', 'Add folder', 'Older than: %d days' % days,
+                  'Include subfolders: ' + ('Yes' if recursive else 'No'), 'Rename group']
+        labels += ['Remove folder: ' + short_path(p) for p in roots]
+        labels += ['Cancel']
+        choice = screen.menu(name, 'Files last modified more than %d days ago · %d folders. Saving deletes nothing.' % (days, len(roots)), labels)
+        if choice is None or choice == len(labels) - 1:return None
+        if choice == 0:
+            if not roots:
+                document(screen, 'Add a folder first', ['Choose at least one folder for this group.']);continue
+            if demo:
+                value = dict(id=area['id'] if area else 'demo-folder', title=name, kind='aged',
+                    roots=roots, older_than_days=days, recursive=recursive,
+                    description='Files last modified more than %d days ago. Demo only.' % days)
+            else:
+                value = cleanup_area(roots, name, days, recursive, area['id'] if area else None)
+            if area:saved.replace([value if a['id'] == area['id'] else a for a in saved.areas])
+            else:saved.add(value)
+            return value['id']
+        if choice == 1:
+            value = edit_text(screen, 'Add folder to ' + name, 'Folder path', hint='Paste an absolute path or use ~/. Each matching file is reviewed before deletion.')
+            if value:
+                path = value if demo else folder_area(value)['roots'][0]
+                if path not in roots:roots.append(path)
+        elif choice == 2:
+            value = edit_text(screen, 'Age filter', 'Days', str(days), 'Match file modification times. Recent files stay.')
+            if value:
+                try:
+                    candidate = int(value)
+                    if not 1 <= candidate <= 36500:raise ValueError()
+                    days = candidate
+                except ValueError:document(screen, 'Invalid age', ['Enter a whole number from 1 to 36500 days.'])
+        elif choice == 3:recursive = not recursive
+        elif choice == 4:
+            value = edit_text(screen, 'Rename group', 'Name', name)
+            if value:name = value
+        elif choice >= 5:roots.pop(choice - 5)
+
+
 def add_item(screen, saved, base_areas, demo):
-    choice = screen.menu('Add to your list', 'Choose what to track.', ['Folder', 'Known caches and worktrees', 'Cancel'],
-                         ['Track its size. Files stay in place.', 'Use an existing cleanup rule.', 'Return to your list.'])
+    choice = screen.menu('Add to your list', 'Choose what to track.', ['Cleanup group', 'Known caches and worktrees', 'Size-only folder', 'Cancel'],
+                         ['Delete reviewed files older than 10 days in chosen folders.', 'Use an existing cleanup rule.', 'Monitor size without enabling deletion.', 'Return to your list.'])
     if choice == 0:
+        return edit_group(screen, saved, demo=demo)
+    if choice == 2:
         path = edit_text(screen, 'Add folder', 'Folder path', hint='Paste an absolute path or use ~/. This folder will be size-only.')
         if not path:
             return None
@@ -345,9 +405,7 @@ def draw_list(screen, areas, measurements, index, selected, notice, query, demo,
     title = 'DiskBoard  /  Cleanup groups'
     right = free + ' free'
     screen.line(1, title + ' ' * max(2, w - 4 - len(title) - len(right)) + right, curses.A_BOLD)
-    actions = [('a', '+ Add'), ('r', 'Refresh'), ('o', 'Options')]
-    if selected:
-        actions.append(('c', ('Review (%d)' % len(selected)) if w >= 84 else 'Review'))
+    actions = [('a', 'Add'), ('c', 'Review'), ('r', 'Refresh' if w >= 70 else 'Scan'), ('o', 'Options' if w >= 70 else 'More')]
     x = 2
     hits = []
     for n, (key, label) in enumerate(actions):
@@ -360,7 +418,7 @@ def draw_list(screen, areas, measurements, index, selected, notice, query, demo,
     wide = w >= 84
     state_width = 20 if wide else 0
     name_width = w - 4 - 4 - 12 - (state_width + 2 if wide else 0)
-    header = '    ' + 'ITEM'.ljust(name_width) + '     ON DISK'
+    header = '    ' + 'GROUP'.ljust(name_width) + '     ON DISK'
     if wide:header += '  ' + 'CLEANUP'
     screen.line(6, header)
     screen.line(7, '─' * (w - 4))
@@ -369,14 +427,14 @@ def draw_list(screen, areas, measurements, index, selected, notice, query, demo,
     start = max(0, min(index - room // 2, len(areas) - room))
     row_hits = []
     if not areas:
-        screen.line(9, 'No matching items.' if query else 'Your list is empty.', curses.A_BOLD)
-        screen.line(11, 'Esc clears the filter.' if query else 'Press A to add a folder or cache.')
+        screen.line(9, 'No matching items.' if query else 'No cleanup groups yet.', curses.A_BOLD)
+        screen.line(11, 'Esc clears the filter.' if query else 'Press A to group folders and set an age filter.')
     for n, area in enumerate(areas[start:start + room], start):
         row = measurements.rows.get(area['id'])
         mark = '[x] ' if area['id'] in selected else '[ ] ' if removable(row) else '    '
         size = '…' if row is None else 'Unavailable' if row['total_bytes'] is None else ui.amount(row['total_bytes'])
         label = mark + clip(area['title'], name_width).ljust(name_width) + size.rjust(12)
-        if wide:label += '  ' + state_label(row).ljust(state_width)
+        if wide:label += '  ' + clip(state_label(row), state_width).ljust(state_width)
         y = 8 + (n - start) * step
         screen.line(y, label, curses.A_REVERSE if n == index and toolbar is None else 0)
         row_hits.append((y, n))
@@ -385,9 +443,9 @@ def draw_list(screen, areas, measurements, index, selected, notice, query, demo,
         area = areas[index]
         row = measurements.rows.get(area['id'])
         path = next(iter(area.get('roots', [])), area['description'])
-        context = state_label(row) + '  ·  ' + short_path(path)
+        context = (area['description'] if area['kind'] == 'aged' else state_label(row) + '  ·  ' + short_path(path))
         screen.line(h - 4, clip(context, w - 4))
-    screen.line(h - 3, clip(notice or ('↑ ↓ Move   Enter Details   Space Select   / Filter   Tab Tools' if w >= 70 else '↑ ↓ Move  Enter Details  Space Select  Tab Tools'), w - 4))
+    screen.line(h - 3, clip(notice or ('↑ ↓ Move   Enter Open   Space Select   / Filter   Tab Tools' if w >= 70 else '↑ ↓ Move  Enter Open  Space Select  Tab Tools'), w - 4))
     checking = ' · checking %d' % len(measurements.pending) if measurements.pending else ''
     footer = '%d items%s' % (len(areas), checking)
     if demo:footer += ' · DEMO DATA'
@@ -425,10 +483,11 @@ def run_list(screen, areas, scan, clean, demo, offer_agent, config, measurements
         selected.intersection_update(a['id'] for a in saved.areas if removable(measure.rows.get(a['id'])))
         visible = [a for a in saved.areas if query.casefold() in (a['title'] + ' ' + ' '.join(a.get('roots', []))).casefold()]
         index = max(0, min(index, len(visible) - 1))
-        toolbar = min(toolbar, 3 if selected else 2) if toolbar is not None else None
+        toolbar = min(toolbar, 3) if toolbar is not None else None
         hits, row_hits = draw_list(screen, visible, measure, index, selected, notice, query, demo, toolbar)
         screen.win.timeout(150)
         key = screen.win.getch()
+        if ord('A') <= key <= ord('Z'):key += 32
         if key == -1:
             continue
         screen.win.timeout(-1)
@@ -479,7 +538,14 @@ def run_list(screen, areas, scan, clean, demo, offer_agent, config, measurements
                 query = edit_text(screen, 'Filter your list', 'Name or path', query, 'Leave blank to show every item.') or ''
                 index = 0
             elif key in (10, 13, curses.KEY_ENTER) and area:
-                details(screen, area, row)
+                choice = screen.menu(area['title'], area['description'], ['Review files to delete', 'Edit folders and age filter', 'View details', 'Back'])
+                if choice == 0:
+                    if review_selected(screen, [area], scan, clean, demo):
+                        measure = measurements(saved.areas);selected.clear()
+                elif choice == 1:
+                    if edit_group(screen, saved, area, demo=demo):
+                        measure = measurements(saved.areas);selected.clear();notice = 'Group saved.'
+                elif choice == 2:details(screen, area, row)
             elif key == ord(' ') and area:
                 if removable(row):
                     if area['id'] in selected:selected.remove(area['id'])
@@ -504,8 +570,10 @@ def run_list(screen, areas, scan, clean, demo, offer_agent, config, measurements
                 else:
                     measure = measurements(saved.areas)
                     selected.clear(); notice = ''
-            elif key == ord('c') and selected:
-                chosen = [a for a in saved.areas if a['id'] in selected]
+            elif key in (ord('c'), ord('d')):
+                chosen = [a for a in saved.areas if a['id'] in selected] if selected else ([area] if area else [])
+                if not chosen:
+                    notice = 'Add a cleanup group first.';continue
                 if review_selected(screen, chosen, scan, clean, demo):
                     measure = measurements(saved.areas)
                     selected.clear()
@@ -546,7 +614,7 @@ def run_list(screen, areas, scan, clean, demo, offer_agent, config, measurements
                     document(screen, 'Your list', ['A adds a folder or known cache. R refreshes sizes.',
                              'Enter opens details. Space selects an eligible item. C reviews the exact paths before removal.',
                              '/ filters by name or path. Tab focuses toolbar actions. Q quits.', '',
-                             'Folders you add are size-only. Remove from list only removes the row.',
+                             'Cleanup groups store folders and an age rule. Enter opens the review and editor. Remove from list only removes the row.',
                              'Cleanup rules recheck paths before removal. Active work and uncertain files stay.', '',
                              'List settings: ' + ('Not saved in demo mode.' if demo else str(saved.path))])
         except (OSError, ValueError, engine.Unsafe) as exc:
